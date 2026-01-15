@@ -1,0 +1,27 @@
+{
+  "name": "balijarbas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.17.1",
+  "dependencies": {
+    "@grammyjs/storage-free": "^2.5.1",
+    "dotenv": "^17.2.3",
+    "grammy": "^1.39.2",
+    "node-schedule": "^2.1.1",
+    "openai": "^6.16.0",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.8",
+    "@types/node-schedule": "^2.1.8",
+    "typescript": "^5.9.3"
+  }
+}
