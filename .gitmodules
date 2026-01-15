@@ -1,0 +1,3 @@
+[submodule "src/mcp-server/telegram-mcp"]
+	path = src/mcp-server/telegram-mcp
+	url = https://github.com/ruiramos/telegram-mcp

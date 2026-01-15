@@ -94,7 +94,7 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
   // Loop to handle tool calls
   while (true) {
     const resp = await openai.responses.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5-mini",
       input: currentInput,
       tools,
     });
