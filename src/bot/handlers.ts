@@ -8,7 +8,7 @@ import {
 } from "./session.js";
 import { cancelAllTasksForChat } from "./scheduler.js";
 import { isGroup, wasMentioned, isReplyToBot, getUserName } from "./helpers.js";
-import { decideAndAct, telegramMcpCall } from "./llm.js";
+import { decideAndAct } from "./llm.js";
 
 export function setupHandlers(bot: Bot<MyContext>): void {
   // Initialize session middleware with free persistent storage
@@ -63,11 +63,15 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       console.error("decideAndAct error:", e);
       // Stay low-noise; only notify in DMs
       if (!isGroup(ctx.chat)) {
-        await telegramMcpCall("sendMessage", {
-          chat_id: ctx.chat.id,
-          text: "I hit a snag processing that. Try again in a moment.",
-          reply_parameters: { message_id: ctx.message.message_id },
-        }).catch(() => {});
+        await ctx.api
+          .sendMessage(
+            ctx.chat.id,
+            "I hit a snag processing that. Try again in a moment.",
+            {
+              reply_parameters: { message_id: ctx.message.message_id },
+            },
+          )
+          .catch(() => {});
       }
     }
   });

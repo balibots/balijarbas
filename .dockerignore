@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+src/mcp-server/telegram-mcp/node_modules
+
+# Build outputs
+dist
+src/mcp-server/telegram-mcp/build
+
+# Development files
+.git
+.gitignore
+.env
+.env.*
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/tests
+**/test
+coverage
+.nyc_output
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore

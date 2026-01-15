@@ -2,8 +2,14 @@
   "name": "balijarbas",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc && cd src/mcp-server/telegram-mcp && npm run build",
+    "build:mcp": "cd src/mcp-server/telegram-mcp && npm run build",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

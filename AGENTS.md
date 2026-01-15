@@ -4,7 +4,49 @@ This document describes the AI agent architecture used in Balijarbas.
 
 ## Overview
 
-Balijarbas uses a tool-calling agent pattern where an LLM (GPT-5-mini) acts as the central decision-maker, with access to various tools it can invoke to accomplish tasks. The agent operates in a loop, making tool calls until it determines the task is complete.
+Balijarbas uses a tool-calling agent pattern where an LLM (GPT-4.1-mini) acts as the central decision-maker, with access to various tools it can invoke to accomplish tasks. The agent operates in a loop, making tool calls until it determines the task is complete.
+
+## Process Architecture
+
+The application runs as two processes managed from a single entry point:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Main Process (index.ts)                  │
+├─────────────────────────────────────────────────────────────┤
+│  • Grammy bot (Telegram polling)                            │
+│  • Session management                                        │
+│  • LLM agent loop                                           │
+│  • Task scheduler                                           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ fork()
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Child Process (MCP Server)                  │
+├─────────────────────────────────────────────────────────────┤
+│  • HTTP server on port 3001                                 │
+│  • 162 Telegram Bot API methods                             │
+│  • Streamable HTTP transport                                │
+│  • Optional API key authentication                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Location:** `src/index.ts`
+
+The main process:
+1. Forks the MCP server as a child process
+2. Starts the Grammy bot
+3. Handles graceful shutdown of both processes
+4. Auto-restarts the MCP server if it crashes
+
+```typescript
+// Fork the MCP server process
+const mcpProcess = fork(mcpServerPath, [], {
+  stdio: ["inherit", "inherit", "inherit", "ipc"],
+  env: process.env, // Share environment variables
+});
+```
 
 ## Agent Types
 

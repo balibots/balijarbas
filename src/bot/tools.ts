@@ -1,5 +1,5 @@
 import { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
-import { MCP_URL } from "./config.js";
+import { MCP_URL, MCP_API_KEY } from "./config.js";
 import {
   createScheduledTask,
   listScheduledTasks,
@@ -16,6 +16,11 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
     server_description: "A Telegram MCP server exposing telegram functionality",
     server_url: MCP_URL,
     require_approval: "never",
+    ...(MCP_API_KEY && {
+      headers: {
+        Authorization: `Bearer ${MCP_API_KEY}`,
+      },
+    }),
   },
   { type: "web_search" },
   {

@@ -150,7 +150,7 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
   }
 }
 
-export async function telegramMcpCall(
+export async function _telegramMcpCall(
   tool: string,
   params: Record<string, unknown> = {},
 ): Promise<unknown> {

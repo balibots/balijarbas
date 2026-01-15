@@ -1,6 +1,6 @@
 # Balijarbas
 
-A smart Telegram bot powered by OpenAI that can manage tasks, remember context, and interact naturally in conversations. It can also access a Telegram MCP server... how useful that is is still not clear.
+A smart Telegram bot powered by OpenAI that can manage tasks, remember context, and interact naturally in conversations. Includes an integrated Telegram MCP server for full Telegram API access.
 
 ## Features
 
@@ -27,8 +27,9 @@ A smart Telegram bot powered by OpenAI that can manage tasks, remember context, 
 ### 🔍 Web Search
 - Can search the web to provide accurate, up-to-date information
 
-### Access to Telegram MCP server
-- Can do anything it has access to on Telegram in theory
+### 📱 Full Telegram API Access
+- Integrated MCP server exposing 162 Telegram Bot API methods
+- Send messages, manage chats, handle media, and more
 
 ## Prerequisites
 
@@ -36,7 +37,6 @@ A smart Telegram bot powered by OpenAI that can manage tasks, remember context, 
 - pnpm
 - A Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
 - An OpenAI API Key
-- A running [Telegram MCP Server](https://github.com/ruiramos/telegram-mcp) instance
 
 ## Installation
 
@@ -47,6 +47,12 @@ cd balijarbas
 
 # Install dependencies
 pnpm install
+
+# Install MCP server dependencies
+cd src/mcp-server/telegram-mcp && npm install && cd ../../..
+
+# Build the MCP server
+pnpm build:mcp
 ```
 
 ## Configuration
@@ -54,27 +60,72 @@ pnpm install
 Create a `.env` file in the root directory:
 
 ```env
+# Required
 BOT_TOKEN=your_telegram_bot_token
 OPENAI_API_KEY=your_openai_api_key
-TELEGRAM_MCP_HOST=http://localhost:3000
-TELEGRAM_MCP_API_KEY=your_mcp_api_key  # optional, if your MCP server requires it
+TELEGRAM_MCP_HOST=http://localhost:3001
+
+# Optional
+MCP_HTTP_PORT=3001                    # Port for the MCP server (default: 3001)
+MCP_API_KEY=your_mcp_api_key          # API key for MCP server authentication
+CORS_ORIGIN=*                         # CORS allowed origins
 ```
 
 ## Running the Bot
 
-```bash
-# Development (with hot reload)
-pnpm tsx src/index.ts
+### Local Development
 
-# Or compile and run
-pnpm tsc
-node dist/index.js
+```bash
+# Development (runs both bot and MCP server with tsx)
+pnpm dev
+
+# Production
+pnpm build        # Build both bot and MCP server
+pnpm start        # Run compiled code
+
+# Other commands
+pnpm typecheck    # Run TypeScript type checking
+pnpm build:mcp    # Build only the MCP server
 ```
+
+The main process automatically:
+- Forks the MCP server as a child process
+- Restarts the MCP server if it crashes
+- Handles graceful shutdown of both processes
+
+### Docker
+
+```bash
+# Build and run with docker-compose (recommended)
+docker-compose up -d
+
+# Or build manually
+docker build -t balijarbas .
+docker run -d \
+  --name balijarbas \
+  -e BOT_TOKEN=your_bot_token \
+  -e OPENAI_API_KEY=your_openai_key \
+  -p 3001:3001 \
+  balijarbas
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+The Docker image:
+- Uses multi-stage build for smaller image size
+- Runs as non-root user for security
+- Includes health checks for the MCP server
+- Auto-restarts on failure
 
 ## Usage Examples
 
 ### Notes & Lists
 - "Add eggs to my shopping list"
+- "Remember that John's birthday is March 5th"
 - "What's on my shopping list?"
 - "Clear my shopping list"
 - "Show me all my notes"
@@ -95,17 +146,23 @@ node dist/index.js
 
 ```
 src/
-├── index.ts              # Entry point
+├── index.ts                    # Entry point - starts bot & forks MCP server
 ├── bot/
-│   ├── config.ts         # Environment configuration
-│   ├── handlers.ts       # Grammy message handlers & session setup
-│   ├── helpers.ts        # Utility functions
-│   ├── llm.ts            # OpenAI integration & prompt building
-│   ├── scheduler.ts      # Task scheduling system
-│   ├── session.ts        # Session management
-│   ├── tools.ts          # Tool definitions & handlers
-│   └── types.ts          # TypeScript type definitions
-└── mcp-server/           # MCP server integration (if self-hosted)
+│   ├── config.ts               # Environment configuration
+│   ├── handlers.ts             # Grammy message handlers & session setup
+│   ├── helpers.ts              # Utility functions
+│   ├── llm.ts                  # OpenAI integration & prompt building
+│   ├── scheduler.ts            # Task scheduling system
+│   ├── session.ts              # Session management
+│   ├── tools.ts                # Tool definitions & handlers
+│   └── types.ts                # TypeScript type definitions
+└── mcp-server/
+    └── telegram-mcp/           # Integrated Telegram MCP server
+        ├── src/
+        │   ├── index-http.ts   # HTTP transport server
+        │   ├── telegram-api.ts # Telegram API wrapper
+        │   └── tools/          # Tool implementations by category
+        └── build/              # Compiled MCP server
 ```
 
 ## Tech Stack
@@ -120,7 +177,7 @@ src/
 
 | Tool | Description |
 |------|-------------|
-| `telegram-mcp` | Supports all Telegram functions accessible to bots I suppose |
+| `telegram-mcp` | Full Telegram Bot API (162 methods) |
 | `web_search` | Search the web for information |
 | `schedule_task` | Schedule a one-time or recurring task |
 | `list_tasks` | List all scheduled tasks |
@@ -141,6 +198,17 @@ The bot uses Grammy's free storage service for session persistence. This means:
 - ✅ Automatic authentication via bot token
 - ⚠️ 16 KiB limit per session
 - ⚠️ 50,000 sessions max per bot
+
+## MCP Server
+
+The integrated MCP server provides HTTP access to the Telegram Bot API:
+
+- **Endpoint:** `http://localhost:3001/mcp`
+- **Health check:** `http://localhost:3001/health`
+- **Authentication:** Optional API key via `MCP_API_KEY`
+- **Tools:** 162 Telegram Bot API methods
+
+The server is automatically started as a child process when the bot runs.
 
 ## Contributing
 

@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import { ResponseOutputMessage } from "openai/resources/responses/responses.js";
 import { Bot } from "grammy";
 import { ScheduledTask, MyContext } from "./types.js";
-import { MCP_URL, OPENAI_API_KEY } from "./config.js";
+import { MCP_URL, MCP_API_KEY, OPENAI_API_KEY } from "./config.js";
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -47,6 +47,11 @@ async function executeScheduledPrompt(task: ScheduledTask): Promise<void> {
             "A Telegram MCP server exposing telegram functionality",
           server_url: MCP_URL,
           require_approval: "never",
+          ...(MCP_API_KEY && {
+            headers: {
+              Authorization: `Bearer ${MCP_API_KEY}`,
+            },
+          }),
         },
         { type: "web_search" },
       ],
