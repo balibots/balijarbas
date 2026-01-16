@@ -10,18 +10,6 @@ import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
 export const tools: ResponseCreateParamsNonStreaming["tools"] = [
-  {
-    type: "mcp",
-    server_label: "telegram-mcp",
-    server_description: "A Telegram MCP server exposing telegram functionality",
-    server_url: MCP_URL,
-    require_approval: "never",
-    ...(MCP_API_KEY && {
-      headers: {
-        Authorization: `Bearer ${MCP_API_KEY}`,
-      },
-    }),
-  },
   { type: "web_search" },
   {
     type: "function",
@@ -83,7 +71,7 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
     type: "function",
     name: "get_config",
     description:
-      "Get the current chat configuration including custom prompt, language preference, and personality settings.",
+      "Get the current configuration for the chat including custom prompt, language preference, and personality settings.",
     strict: false,
     parameters: {
       type: "object",
@@ -205,6 +193,18 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
       },
       required: [],
     },
+  },
+  {
+    type: "mcp",
+    server_label: "telegram-mcp",
+    server_description: "A Telegram MCP server exposing telegram functionality",
+    server_url: MCP_URL,
+    require_approval: "never",
+    ...(MCP_API_KEY && {
+      headers: {
+        Authorization: `Bearer ${MCP_API_KEY}`,
+      },
+    }),
   },
 ];
 

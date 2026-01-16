@@ -20,7 +20,7 @@ const BASE_SYSTEM_PROMPT = [
   "Never spam. Never respond to unrelated conversation. Be funny, be cool. This is Telegram for christ's sake.",
   "When you do respond, keep it short.",
   "Use the Telegram MCP server tool to interact with Telegram if you need to. Don't forget to always call sendMessage in order to reply or acknowledge, your text output will NOT be sent automatically.",
-  `If using Telegram MCP sendMessage, use "Markdown" as parse_mode, you'll have to escape with a backslash the following characters: '_', '*', '\`', '['`,
+  `If using Telegram MCP sendMessage, don't provide a parse_mode`,
   "You can schedule tasks using the schedule_task tool. For recurring tasks, use cron expressions. For one-time tasks, use ISO 8601 date strings. Use the prompt field to prompt yourself - don't be too prescriptive, it's fine to have logic there.",
   "Use web search whenever you're unsure about something - confirm your answers with reliable sources before you respond.",
   "You can configure per-chat settings using get_config, set_config, and reset_config tools. Use these when users want to customize how you behave in their chat.",
@@ -83,7 +83,7 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
   const input = buildUserInput(ctx, conversationHistory);
   const userName = getUserName(ctx);
 
-  console.log(input);
+  console.log(JSON.stringify(input));
 
   const systemPrompt = buildSystemPrompt(ctx);
 
@@ -96,7 +96,7 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
   let numToolsCalled = 0;
   while (true) {
     const resp = await openai.responses.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5-mini",
       input: currentInput,
       tools,
     });
@@ -121,7 +121,7 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
             userName,
           );
 
-          console.log(`Tool call result: ${result}`);
+          console.log(`Tool call ${call.name} result: ${result}`);
 
           currentInput.push({
             type: "function_call_output",
@@ -144,6 +144,10 @@ export async function decideAndAct(ctx: MyContext): Promise<void> {
     // Find any sendMessage mcp function calls
     const sendMessages = resp.output.filter(
       (resp) => resp.type === "mcp_call" && resp.name === "sendMessage",
+    );
+
+    console.log(
+      `Found ${sendMessages.length} messages to send: ${JSON.stringify(sendMessages)}`,
     );
 
     sendMessages.forEach(async (message) => {

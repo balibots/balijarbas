@@ -26,7 +26,7 @@ async function executeScheduledPrompt(task: ScheduledTask): Promise<void> {
     "The user scheduled this prompt to run at this time.",
     "Execute the prompt and provide a helpful response.",
     "Keep your response concise.",
-    "Use the Telegram MCP server tool to interact with Telegram if you need to - use sendMessage if you need a message to be sent somewhere.",
+    `If using Telegram MCP sendMessage, don't provide a parse_mode`,
   ].join(" ");
 
   try {

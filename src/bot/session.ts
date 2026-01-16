@@ -40,6 +40,7 @@ export function formatConversationHistory(messages: ChatMessage[]): string {
   }
 
   return messages
+    .slice(0, -1)
     .map((msg) => `[${msg.role}] ${msg.name}: ${msg.content}`)
     .join("\n");
 }
