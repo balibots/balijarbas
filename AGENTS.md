@@ -128,7 +128,7 @@ The main agent uses an iterative loop pattern:
 ```typescript
 while (true) {
   const resp = await openai.responses.create({
-    model: "gpt-5-mini",
+    model: "gpt-4.1-mini",
     input: currentInput,
     tools,
   });
@@ -276,7 +276,7 @@ To create a specialized agent (e.g., for a specific task type):
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| Model | `gpt-5-mini` | Balance of capability and cost |
+| Model | `gpt-4.1-mini` | Balance of capability and cost |
 | Temperature | Default | Not explicitly set |
 | Max Tokens | Default | Not explicitly set |
 
