@@ -29,6 +29,7 @@ console.log(`Using LLM provider: ${provider.name}`);
 const BASE_SYSTEM_PROMPT = [
   "You are a Telegram bot assistant controlling actions through tools.",
   "If user mentions the bot, answer their request.",
+  "You can see and understand images that users send. When a user sends an image, analyze it and respond appropriately to any questions or requests about it.",
   "Never spam. Never respond to unrelated conversation. Be funny, be cool. This is Telegram for christ's sake.",
   "Use the Telegram MCP server tool to interact with Telegram if you need to. Don't forget to always call sendMessage in order to reply or acknowledge, your text output will NOT be sent automatically.",
   "If using Telegram MCP sendMessage, don't provide a parse_mode",
@@ -69,15 +70,31 @@ function buildSystemPrompt(ctx: MyContext): string {
   return parts.join("");
 }
 
-function buildUserInput(ctx: MyContext, conversationHistory: string): string {
+type UserInputContent =
+  | string
+  | Array<
+      | { type: "input_text"; text: string }
+      | {
+          type: "input_image";
+          image_url: string;
+          detail: "low" | "high" | "auto";
+        }
+    >;
+
+function buildUserInput(
+  ctx: MyContext,
+  conversationHistory: string,
+  imageUrl?: string,
+): UserInputContent {
   const msg = ctx.message!;
   const chat = ctx.chat!;
 
-  return [
+  const textContent = [
     `chat_id=${chat.id} chat_type=${chat.type} chat_title=${"title" in chat ? chat.title : ""}`,
     `from=${ctx.from?.first_name ?? ""} ${ctx.from?.last_name ?? ""} (@${ctx.from?.username ?? ""})`,
     `message_id=${msg.message_id}`,
-    `text=${msg.text}`,
+    `text=${"text" in msg ? msg.text : ""}`,
+    `caption=${"caption" in msg ? msg.caption : ""}`,
     `was_mentioned=${wasMentioned(ctx)}`,
     `is_reply_to_bot=${isReplyToBot(ctx)}`,
     "",
@@ -85,17 +102,29 @@ function buildUserInput(ctx: MyContext, conversationHistory: string): string {
     conversationHistory,
     "--- End of history ---",
   ].join("\n");
+
+  if (imageUrl) {
+    return [
+      { type: "input_text", text: textContent },
+      { type: "input_image", image_url: imageUrl, detail: "auto" },
+    ];
+  }
+
+  return textContent;
 }
 
 /**
  * Main decision and action loop
  * Uses the configured LLM provider to process messages and execute tool calls
  */
-export async function decideAndAct(ctx: MyContext): Promise<void> {
+export async function decideAndAct(
+  ctx: MyContext,
+  imageUrl?: string,
+): Promise<void> {
   const chat = ctx.chat!;
 
   const conversationHistory = formatConversationHistory(ctx.session.messages);
-  const input = buildUserInput(ctx, conversationHistory);
+  const input = buildUserInput(ctx, conversationHistory, imageUrl);
   const userName = getUserName(ctx);
 
   console.log(JSON.stringify(input));

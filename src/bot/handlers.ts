@@ -7,7 +7,13 @@ import {
   resetSession,
 } from "./session.js";
 import { cancelAllTasksForChat } from "./scheduler.js";
-import { isGroup, wasMentioned, isReplyToBot, getUserName } from "./helpers.js";
+import {
+  isGroup,
+  wasMentioned,
+  isReplyToBot,
+  getUserName,
+  downloadTelegramImage,
+} from "./helpers.js";
 import { decideAndAct } from "./llm.js";
 
 export function setupHandlers(bot: Bot<MyContext>): void {
@@ -67,6 +73,43 @@ export function setupHandlers(bot: Bot<MyContext>): void {
           .sendMessage(
             ctx.chat.id,
             "I hit a snag processing that. Try again in a moment.",
+            {
+              reply_parameters: { message_id: ctx.message.message_id },
+            },
+          )
+          .catch(() => {});
+      }
+    }
+  });
+
+  // Handle photo messages
+  bot.on("message:photo", async (ctx) => {
+    if (ctx.from?.is_bot) return;
+
+    // Hard gate: only consider acting in groups when mentioned or replied-to
+    if (isGroup(ctx.chat) && !wasMentioned(ctx) && !isReplyToBot(ctx)) return;
+
+    const userName = getUserName(ctx);
+    const caption = ctx.message.caption ?? "";
+
+    try {
+      // Get the largest photo (last in the array)
+      const photos = ctx.message.photo;
+      const largestPhoto = photos[photos.length - 1];
+      const imageUrl = await downloadTelegramImage(ctx, largestPhoto.file_id);
+
+      // Store user message with image in session
+      addMessageToSession(ctx, "user", userName, caption, imageUrl);
+
+      await decideAndAct(ctx, imageUrl);
+    } catch (e) {
+      console.error("decideAndAct error (photo):", e);
+      // Stay low-noise; only notify in DMs
+      if (!isGroup(ctx.chat)) {
+        await ctx.api
+          .sendMessage(
+            ctx.chat.id,
+            "I hit a snag processing that image. Try again in a moment.",
             {
               reply_parameters: { message_id: ctx.message.message_id },
             },
