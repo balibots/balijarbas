@@ -61,15 +61,40 @@ Create a `.env` file in the root directory:
 
 ```env
 # Required
-BOT_TOKEN=your_telegram_bot_token
-OPENAI_API_KEY=your_openai_api_key
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_MCP_HOST=http://localhost:3001
+
+# LLM Provider (choose one: "openai" or "gemini")
+LLM_PROVIDER=openai
+
+# OpenAI Configuration (required if LLM_PROVIDER=openai)
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini             # Optional, defaults to gpt-4.1-mini
+
+# Google Gemini Configuration (required if LLM_PROVIDER=gemini)
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash         # Optional, defaults to gemini-2.5-flash
 
 # Optional
 MCP_HTTP_PORT=3001                    # Port for the MCP server (default: 3001)
 MCP_API_KEY=your_mcp_api_key          # API key for MCP server authentication
 CORS_ORIGIN=*                         # CORS allowed origins
 ```
+
+### LLM Providers
+
+The bot supports multiple LLM providers via the `@google/genai` and `openai` SDKs:
+
+| Provider | Models | Function Tools | Google Search | MCP Tools |
+|----------|--------|----------------|---------------|-----------|
+| OpenAI | gpt-4.1-mini, gpt-4o, etc. | ✅ | ✅ (web_search) | ✅ |
+| Gemini | gemini-2.5-flash, gemini-2.5-pro | ✅ | ✅ (grounding) | ⚠️ Limited |
+
+**Notes:**
+- Both providers support function calling for custom tools (scheduling, notes, config)
+- OpenAI has full MCP support for Telegram API integration
+- Gemini uses Google Search grounding for web searches
+- Gemini MCP support requires additional setup and may not be available in all regions
 
 ## Running the Bot
 

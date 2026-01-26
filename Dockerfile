@@ -72,6 +72,7 @@ USER botuser
 ENV NODE_ENV=production
 ENV MCP_HTTP_PORT=3001
 ENV TELEGRAM_MCP_HOST=http://localhost:3001
+ENV LLM_PROVIDER=openai
 
 # Expose MCP server port
 EXPOSE 3001

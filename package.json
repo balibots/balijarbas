@@ -17,6 +17,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
+    "@google/genai": "^1.37.0",
     "@grammyjs/storage-free": "^2.5.1",
     "dotenv": "^17.2.3",
     "grammy": "^1.39.2",

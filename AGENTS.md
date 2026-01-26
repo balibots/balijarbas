@@ -4,7 +4,9 @@ This document describes the AI agent architecture used in Balijarbas.
 
 ## Overview
 
-Balijarbas uses a tool-calling agent pattern where an LLM (GPT-4.1-mini) acts as the central decision-maker, with access to various tools it can invoke to accomplish tasks. The agent operates in a loop, making tool calls until it determines the task is complete.
+Balijarbas uses a tool-calling agent pattern where an LLM acts as the central decision-maker, with access to various tools it can invoke to accomplish tasks. The agent operates in a loop, making tool calls until it determines the task is complete.
+
+The system supports multiple LLM providers (OpenAI, Google Gemini) through a provider abstraction layer, making it easy to switch between or add new backends.
 
 ## Process Architecture
 
@@ -46,6 +48,80 @@ const mcpProcess = fork(mcpServerPath, [], {
   stdio: ["inherit", "inherit", "inherit", "ipc"],
   env: process.env, // Share environment variables
 });
+```
+
+## LLM Provider Architecture
+
+The bot uses a provider abstraction layer to support multiple LLM backends.
+
+**Location:** `src/bot/llm/`
+
+```
+src/bot/llm/
+├── types.ts           # Common interfaces (LLMProvider, Tool, Message, etc.)
+├── openai-provider.ts # OpenAI implementation
+├── gemini-provider.ts # Google Gemini implementation
+└── index.ts           # Factory functions and exports
+```
+
+### Provider Interface
+
+```typescript
+interface LLMProvider {
+  readonly name: string;
+
+  complete(
+    input: InputItem[],
+    tools: Tool[],
+    options?: CompletionOptions,
+  ): Promise<LLMResponse>;
+
+  buildNextInput(
+    currentInput: InputItem[],
+    response: LLMResponse,
+    toolResults: Array<{ callId: string; result: string }>,
+  ): InputItem[];
+}
+```
+
+### Supported Providers
+
+| Provider | Environment Variable | Default Model | MCP Support | Web Search | SDK |
+|----------|---------------------|---------------|-------------|------------|-----|
+| OpenAI   | `OPENAI_API_KEY`    | gpt-4.1-mini  | ✅ Yes      | ✅ Yes     | `openai` |
+| Gemini   | `GEMINI_API_KEY`    | gemini-2.5-flash | ⚠️ Limited | ✅ Yes (Google Search grounding) | `@google/genai` |
+
+### Provider Selection
+
+Set `LLM_PROVIDER` environment variable:
+
+```bash
+LLM_PROVIDER=openai   # Use OpenAI (default)
+LLM_PROVIDER=gemini   # Use Google Gemini
+```
+
+### Adding a New Provider
+
+1. Create a new file `src/bot/llm/my-provider.ts`
+2. Implement the `LLMProvider` interface
+3. Add to the factory in `src/bot/llm/index.ts`
+
+```typescript
+import { LLMProvider, LLMResponse, Tool, InputItem } from "./types.js";
+
+export class MyProvider implements LLMProvider {
+  readonly name = "my-provider";
+
+  async complete(input: InputItem[], tools: Tool[]): Promise<LLMResponse> {
+    // Convert input/tools to provider format
+    // Make API call
+    // Parse response into LLMResponse format
+  }
+
+  buildNextInput(currentInput, response, toolResults): InputItem[] {
+    // Build input for next iteration after tool calls
+  }
+}
 ```
 
 ## Agent Types
