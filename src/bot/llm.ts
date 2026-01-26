@@ -10,6 +10,7 @@ import {
   LLMProvider,
   Tool,
   InputItem,
+  UserInputContent,
   createProviderFromEnv,
 } from "./llm/index.js";
 import {
@@ -69,17 +70,6 @@ function buildSystemPrompt(ctx: MyContext): string {
 
   return parts.join("");
 }
-
-type UserInputContent =
-  | string
-  | Array<
-      | { type: "input_text"; text: string }
-      | {
-          type: "input_image";
-          image_url: string;
-          detail: "low" | "high" | "auto";
-        }
-    >;
 
 function buildUserInput(
   ctx: MyContext,

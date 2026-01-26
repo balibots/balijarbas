@@ -278,9 +278,30 @@ export class GeminiProvider implements LLMProvider {
           // Gemini uses systemInstruction for system messages
           systemInstruction = item.content;
         } else if (item.role === "user") {
+          // Handle multimodal content (text + images)
+          let parts: Part[];
+          if (typeof item.content === "string") {
+            parts = [{ text: item.content }];
+          } else {
+            // Array of input_text and input_image parts
+            parts = item.content.map((part) => {
+              if (part.type === "input_text") {
+                return { text: part.text };
+              } else {
+                // input_image - Gemini expects inlineData or fileData
+                // For URLs, we use fileData with the URL
+                return {
+                  fileData: {
+                    mimeType: "image/jpeg", // Default, Gemini will detect actual type
+                    fileUri: part.image_url,
+                  },
+                };
+              }
+            });
+          }
           contents.push({
             role: "user",
-            parts: [{ text: item.content }],
+            parts,
           });
         } else if (item.role === "assistant") {
           contents.push({

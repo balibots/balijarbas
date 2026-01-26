@@ -32,9 +32,20 @@ export interface SystemMessage {
   content: string;
 }
 
+export type UserInputContent =
+  | string
+  | Array<
+      | { type: "input_text"; text: string }
+      | {
+          type: "input_image";
+          image_url: string;
+          detail: "low" | "high" | "auto";
+        }
+    >;
+
 export interface UserMessage {
   role: "user";
-  content: string;
+  content: UserInputContent;
 }
 
 export interface AssistantMessage {
