@@ -98,8 +98,8 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       const largestPhoto = photos[photos.length - 1];
       const imageUrl = await downloadTelegramImage(ctx, largestPhoto.file_id);
 
-      // Store user message with image in session
-      addMessageToSession(ctx, "user", userName, caption, imageUrl);
+      // Store user message with image flag in session (not the full base64)
+      addMessageToSession(ctx, "user", userName, caption, true);
 
       await decideAndAct(ctx, imageUrl);
     } catch (e) {

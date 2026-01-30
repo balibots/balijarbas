@@ -20,7 +20,7 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(config: OpenAIProviderConfig) {
     this.client = new OpenAI({ apiKey: config.apiKey });
-    this.defaultModel = config.defaultModel ?? "gpt-4.1-mini";
+    this.defaultModel = config.defaultModel ?? "gpt-5-mini";
   }
 
   async complete(
@@ -36,7 +36,7 @@ export class OpenAIProvider implements LLMProvider {
     // Convert our input format to OpenAI format
     const openaiInput = this.convertInput(input);
 
-    const response = await this.client.responses.create({
+    const params = {
       model,
       input: openaiInput,
       tools: openaiTools,
@@ -46,7 +46,9 @@ export class OpenAIProvider implements LLMProvider {
       ...(options?.maxTokens !== undefined && {
         max_output_tokens: options.maxTokens,
       }),
-    });
+    };
+
+    const response = await this.client.responses.create(params);
 
     return this.parseResponse(response);
   }

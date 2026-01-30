@@ -88,7 +88,7 @@ interface LLMProvider {
 
 | Provider | Environment Variable | Default Model | MCP Support | Web Search | SDK |
 |----------|---------------------|---------------|-------------|------------|-----|
-| OpenAI   | `OPENAI_API_KEY`    | gpt-4.1-mini  | ✅ Yes      | ✅ Yes     | `openai` |
+| OpenAI   | `OPENAI_API_KEY`    | gpt-5-mini  | ✅ Yes      | ✅ Yes     | `openai` |
 | Gemini   | `GEMINI_API_KEY`    | gemini-2.5-flash | ⚠️ Limited | ✅ Yes (Google Search grounding) | `@google/genai` |
 
 ### Provider Selection
@@ -204,7 +204,7 @@ The main agent uses an iterative loop pattern:
 ```typescript
 while (true) {
   const resp = await openai.responses.create({
-    model: "gpt-4.1-mini",
+    model: "gpt-5-mini",
     input: currentInput,
     tools,
   });

@@ -33,11 +33,12 @@ const BASE_SYSTEM_PROMPT = [
   "You can see and understand images that users send. When a user sends an image, analyze it and respond appropriately to any questions or requests about it.",
   "Never spam. Never respond to unrelated conversation. Be funny, be cool. This is Telegram for christ's sake.",
   "Use the Telegram MCP server tool to interact with Telegram if you need to. Don't forget to always call sendMessage in order to reply or acknowledge, your text output will NOT be sent automatically.",
-  "If using Telegram MCP sendMessage, don't provide a parse_mode",
+  "If using Telegram MCP sendMessage, don't provide a parse_mode or a business_connection_id. NEVER include citations or citation markers on your sendMessage replies.",
   "You can schedule tasks using the schedule_task tool. For recurring tasks, use cron expressions. For one-time tasks, use ISO 8601 date strings. Use the prompt field to prompt yourself - don't be too prescriptive, it's fine to have logic there.",
   "Use web search whenever you're unsure about something - confirm your answers with reliable sources before you respond.",
   "You can configure per-chat configuration settings using get_config, set_config, and reset_config tools. Use these when users want to customize how you behave in their chat.",
   "You can save notes, to-do items, or any context the user wants you to remember using add_note, list_notes, remove_note, and clear_notes tools. Notes are organized by keys/categories (e.g., 'shopping list', 'todos', 'birthdays'). Use these when users ask you to remember something, manage lists, or recall saved information.",
+  "You can not do anything else - if the user asks you to do something you can't with the tools you have at your disposal, politely deny the request.",
 ].join(" ");
 
 function buildSystemPrompt(ctx: MyContext): string {
@@ -50,18 +51,18 @@ function buildSystemPrompt(ctx: MyContext): string {
     parts.push(`\n\n${configPrompt}`);
   }
 
-  // Add notes context if any exist
-  const notesKeys = Object.keys(ctx.session.notes);
-  if (notesKeys.length > 0) {
-    const notesContext = notesKeys
-      .map((key) => {
-        const items = ctx.session.notes[key];
-        const itemsList = items.map((n) => `  - ${n.content}`).join("\n");
-        return `${key}:\n${itemsList}`;
-      })
-      .join("\n");
-    parts.push(`\n\nSaved notes/context for this chat:\n${notesContext}`);
-  }
+  // Add notes context if any exist - removed this - expect the model to get this through the tool call if it needs it
+  // const notesKeys = Object.keys(ctx.session.notes);
+  // if (notesKeys.length > 0) {
+  //   const notesContext = notesKeys
+  //     .map((key) => {
+  //       const items = ctx.session.notes[key];
+  //       const itemsList = items.map((n) => `  - ${n.content}`).join("\n");
+  //       return `${key}:\n${itemsList}`;
+  //     })
+  //     .join("\n");
+  //   parts.push(`\n\nSaved notes/context for this chat:\n${notesContext}`);
+  // }
 
   // Add current date
   parts.push(
@@ -117,8 +118,6 @@ export async function decideAndAct(
   const input = buildUserInput(ctx, conversationHistory, imageUrl);
   const userName = getUserName(ctx);
 
-  console.log(JSON.stringify(input));
-
   const systemPrompt = buildSystemPrompt(ctx);
 
   // Build initial input
@@ -131,7 +130,7 @@ export async function decideAndAct(
   const tools: Tool[] = toolDefinitions as unknown as Tool[];
 
   // Loop to handle tool calls
-  const MAX_TOOL_CALLS = 6;
+  const MAX_TOOL_CALLS = 8;
   let numToolsCalled = 0;
 
   while (true) {

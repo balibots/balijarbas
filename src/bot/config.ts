@@ -19,7 +19,7 @@ export const MCP_URL = `${process.env.TELEGRAM_MCP_HOST}/mcp`;
 export const MCP_API_KEY = process.env.TELEGRAM_MCP_API_KEY;
 
 // Session Configuration
-export const MAX_CONTEXT_MESSAGES = 10;
+export const MAX_CONTEXT_MESSAGES = 5;
 
 // Validation
 if (!BOT_TOKEN) throw new Error("Missing TELEGRAM_BOT_TOKEN");

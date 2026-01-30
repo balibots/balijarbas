@@ -20,13 +20,13 @@ export function addMessageToSession(
   role: "user" | "assistant",
   name: string,
   content: string,
-  imageUrl?: string,
+  hasImage?: boolean,
 ): void {
   ctx.session.messages.push({
     role,
     name,
     content,
-    ...(imageUrl && { imageUrl }),
+    ...(hasImage && { hasImage }),
     timestamp: Date.now(),
   });
 
@@ -44,7 +44,7 @@ export function formatConversationHistory(messages: ChatMessage[]): string {
   return messages
     .slice(0, -1)
     .map((msg) => {
-      const imageNote = msg.imageUrl ? " [sent an image]" : "";
+      const imageNote = msg.hasImage ? " [sent an image]" : "";
       return `[${msg.role}] ${msg.name}: ${msg.content}${imageNote}`;
     })
     .join("\n");

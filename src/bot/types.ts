@@ -6,7 +6,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   name: string;
   content: string;
-  imageUrl?: string; // Base64 data URL for images
+  hasImage?: boolean; // Whether this message included an image
   timestamp: number;
 }
 
