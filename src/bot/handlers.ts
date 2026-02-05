@@ -14,7 +14,8 @@ import {
   getUserName,
   downloadTelegramImage,
 } from "./helpers.js";
-import { decideAndAct } from "./llm.js";
+import { decideAndAct, processInlineQuery } from "./llm.js";
+import { InlineQueryResultArticle } from "grammy/types";
 
 export function setupHandlers(bot: Bot<MyContext>): void {
   // Initialize session middleware with free persistent storage
@@ -116,6 +117,71 @@ export function setupHandlers(bot: Bot<MyContext>): void {
           )
           .catch(() => {});
       }
+    }
+  });
+
+  // Handle inline queries - allows users to use @botname query in any chat
+  bot.on("inline_query", async (ctx) => {
+    const query = ctx.inlineQuery.query.trim();
+
+    // Require at least 3 characters to trigger a response
+    if (query.length < 3) {
+      await ctx.answerInlineQuery([], { cache_time: 0 });
+      return;
+    }
+
+    const userId = ctx.from.id;
+    const userName = ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : "");
+
+    try {
+      console.log(`Inline query from ${userName} (${userId}): ${query}`);
+
+      const response = await processInlineQuery(query, userId, userName);
+
+      // Truncate response if too long (Telegram limit is 4096 for message_text)
+      const truncatedResponse = response.length > 4000
+        ? response.slice(0, 3997) + "..."
+        : response;
+
+      // Create a preview/description (first 100 chars)
+      const description = truncatedResponse.length > 100
+        ? truncatedResponse.slice(0, 97) + "..."
+        : truncatedResponse;
+
+      const result: InlineQueryResultArticle = {
+        type: "article",
+        id: `inline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: `Answer: ${query.slice(0, 50)}${query.length > 50 ? "..." : ""}`,
+        description: description,
+        input_message_content: {
+          message_text: truncatedResponse,
+        },
+      };
+
+      await ctx.answerInlineQuery([result], {
+        cache_time: 300, // Cache for 5 minutes
+        is_personal: true, // Results are personal to the user
+      });
+
+      console.log(`Inline query answered for ${userName}`);
+    } catch (e) {
+      console.error("Inline query error:", e);
+
+      // Return an error result
+      const errorResult: InlineQueryResultArticle = {
+        type: "article",
+        id: `error_${Date.now()}`,
+        title: "Error processing query",
+        description: "Something went wrong. Please try again.",
+        input_message_content: {
+          message_text: "Sorry, I couldn't process that query. Please try again or ask me directly in a chat.",
+        },
+      };
+
+      await ctx.answerInlineQuery([errorResult], {
+        cache_time: 0,
+        is_personal: true,
+      });
     }
   });
 }
