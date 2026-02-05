@@ -214,3 +214,57 @@ export async function decideAndAct(
 export function getProvider(): LLMProvider {
   return provider;
 }
+
+/**
+ * Process an inline query and return a text response
+ * This is a simplified version without MCP tools or session context
+ */
+export async function processInlineQuery(
+  query: string,
+  userId: number,
+  userName: string,
+): Promise<string> {
+  const systemPrompt = [
+    "You are an AI assistant responding to an inline query in Telegram.",
+    "Provide a helpful, concise, and direct answer to the user's query.",
+    "Keep responses clear and informative. Do not use citations or markdown formatting that won't render properly.",
+    "Use web search if you need to look up current information or verify facts.",
+    `Current date: ${new Date().toISOString()}`,
+  ].join(" ");
+
+  const userInput = `User ${userName} (ID: ${userId}) asks: ${query}`;
+
+  let currentInput: InputItem[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userInput },
+  ];
+
+  // Only allow web search for inline queries
+  const tools: Tool[] = [{ type: "web_search" }];
+
+  // Simple loop to handle potential web search calls
+  const MAX_ITERATIONS = 3;
+  let iterations = 0;
+
+  while (iterations < MAX_ITERATIONS) {
+    iterations++;
+    const response = await provider.complete(currentInput, tools);
+
+    // If there's text output, return it
+    if (response.textContent) {
+      return response.textContent;
+    }
+
+    // If no output text and no tool calls, break
+    if (response.toolCalls.length === 0) {
+      break;
+    }
+
+    // Continue loop to let model process any web search results
+    // The provider handles web search internally, so we just need to wait
+    // for the final text response
+    break;
+  }
+
+  return "I couldn't generate a response. Please try a different query.";
+}
