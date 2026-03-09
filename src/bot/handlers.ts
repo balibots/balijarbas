@@ -65,6 +65,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
 
     // Store user message in session
     const userName = getUserName(ctx);
+    console.log(`[msg:text] chat=${ctx.chat.id} from=${userName} text=${ctx.message.text.slice(0, 200)}`);
     addMessageToSession(ctx, "user", userName, ctx.message.text);
 
     try {
@@ -95,6 +96,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
 
     const userName = getUserName(ctx);
     const caption = ctx.message.caption ?? "";
+    console.log(`[msg:photo] chat=${ctx.chat.id} from=${userName} caption=${caption.slice(0, 200)}`);
 
     try {
       // Get the largest photo (last in the array)
@@ -130,6 +132,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       if (isGroup(ctx.chat) && !wasMentioned(ctx) && !isReplyToBot(ctx)) return;
 
       const userName = getUserName(ctx);
+      console.log(`[msg:voice] chat=${ctx.chat.id} from=${userName} duration=${ctx.message.voice.duration}s`);
 
       try {
         const { buffer, filePath } = await downloadTelegramFile(
