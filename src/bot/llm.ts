@@ -82,15 +82,18 @@ function buildUserInput(
   ctx: MyContext,
   conversationHistory: string,
   imageUrl?: string,
+  textOverride?: string,
 ): UserInputContent {
   const msg = ctx.message!;
   const chat = ctx.chat!;
+
+  const messageText = textOverride ?? ("text" in msg ? (msg.text as string) : "");
 
   const textContent = [
     `chat_id=${chat.id} chat_type=${chat.type} chat_title=${"title" in chat ? chat.title : ""}`,
     `from=${ctx.from?.first_name ?? ""} ${ctx.from?.last_name ?? ""} (@${ctx.from?.username ?? ""})`,
     `message_id=${msg.message_id}`,
-    `text=${"text" in msg ? msg.text : ""}`,
+    `text=${messageText}`,
     `caption=${"caption" in msg ? msg.caption : ""}`,
     `was_mentioned=${wasMentioned(ctx)}`,
     `is_reply_to_bot=${isReplyToBot(ctx)}`,
@@ -117,11 +120,12 @@ function buildUserInput(
 export async function decideAndAct(
   ctx: MyContext,
   imageUrl?: string,
+  textOverride?: string,
 ): Promise<void> {
   const chat = ctx.chat!;
 
   const conversationHistory = formatConversationHistory(ctx.session.messages);
-  const input = buildUserInput(ctx, conversationHistory, imageUrl);
+  const input = buildUserInput(ctx, conversationHistory, imageUrl, textOverride);
   const userName = getUserName(ctx);
 
   const systemPrompt = buildSystemPrompt(ctx);

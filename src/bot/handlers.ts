@@ -151,7 +151,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
           `[Voice message]: ${transcription}`,
         );
 
-        await decideAndAct(ctx);
+        await decideAndAct(ctx, undefined, `[Voice message]: ${transcription}`);
       } catch (e) {
         console.error("Voice message error:", e);
         if (!isGroup(ctx.chat)) {
