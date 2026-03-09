@@ -13,7 +13,7 @@ export async function textToSpeech(
   const model = modelId ?? ELEVENLABS_MODEL_ID;
 
   const response = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=ogg_48000_64`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=opus_48000_64`,
     {
       method: "POST",
       headers: {
