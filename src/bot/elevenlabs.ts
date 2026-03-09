@@ -34,3 +34,35 @@ export async function textToSpeech(
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
+
+export async function speechToText(
+  audioBuffer: Buffer,
+  filename: string,
+): Promise<string> {
+  const formData = new FormData();
+  formData.append("model_id", "scribe_v2");
+  formData.append(
+    "file",
+    new Blob([new Uint8Array(audioBuffer)]),
+    filename,
+  );
+
+  const response = await fetch(
+    "https://api.elevenlabs.io/v1/speech-to-text",
+    {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY! },
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `ElevenLabs STT error ${response.status}: ${errorText}`,
+    );
+  }
+
+  const data = (await response.json()) as { text: string };
+  return data.text;
+}

@@ -13,7 +13,10 @@ import {
   isReplyToBot,
   getUserName,
   downloadTelegramImage,
+  downloadTelegramFile,
 } from "./helpers.js";
+import { ELEVENLABS_API_KEY } from "./config.js";
+import { speechToText } from "./elevenlabs.js";
 import { decideAndAct, processInlineQuery } from "./llm.js";
 import { InlineQueryResultArticle } from "grammy/types";
 
@@ -119,6 +122,50 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       }
     }
   });
+
+  // Handle voice messages — transcribe via ElevenLabs STT then process as text
+  if (ELEVENLABS_API_KEY) {
+    bot.on("message:voice", async (ctx) => {
+      if (ctx.from?.is_bot) return;
+      if (isGroup(ctx.chat) && !wasMentioned(ctx) && !isReplyToBot(ctx)) return;
+
+      const userName = getUserName(ctx);
+
+      try {
+        const { buffer, filePath } = await downloadTelegramFile(
+          ctx,
+          ctx.message.voice.file_id,
+        );
+        const filename = filePath.split("/").pop() ?? "voice.ogg";
+        const transcription = await speechToText(buffer, filename);
+
+        if (!transcription.trim()) {
+          return; // empty transcription, nothing to do
+        }
+
+        // Store transcribed text in session
+        addMessageToSession(
+          ctx,
+          "user",
+          userName,
+          `[Voice message]: ${transcription}`,
+        );
+
+        await decideAndAct(ctx);
+      } catch (e) {
+        console.error("Voice message error:", e);
+        if (!isGroup(ctx.chat)) {
+          await ctx.api
+            .sendMessage(
+              ctx.chat.id,
+              "I couldn't process that voice message. Try again in a moment.",
+              { reply_parameters: { message_id: ctx.message.message_id } },
+            )
+            .catch(() => {});
+        }
+      }
+    });
+  }
 
   // Handle inline queries - allows users to use @botname query in any chat
   bot.on("inline_query", async (ctx) => {

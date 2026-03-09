@@ -24,6 +24,22 @@ export async function downloadTelegramImage(
   return `data:${mimeType};base64,${base64}`;
 }
 
+export async function downloadTelegramFile(
+  ctx: MyContext,
+  fileId: string,
+): Promise<{ buffer: Buffer; filePath: string }> {
+  const file = await ctx.api.getFile(fileId);
+  const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
+
+  const response = await fetch(fileUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download file: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return { buffer: Buffer.from(arrayBuffer), filePath: file.file_path ?? "" };
+}
+
 export function wasMentioned(ctx: MyContext): boolean {
   const me = ctx.me?.username;
   const text = ctx.message?.text ?? ctx.message?.caption ?? "";
