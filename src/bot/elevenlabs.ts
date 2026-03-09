@@ -35,6 +35,39 @@ export async function textToSpeech(
   return Buffer.from(arrayBuffer);
 }
 
+export async function generateMusic(
+  prompt: string,
+  durationMs: number = 30000,
+  instrumental: boolean = false,
+): Promise<Buffer> {
+  const response = await fetch(
+    "https://api.elevenlabs.io/v1/music?output_format=mp3_44100_128",
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt,
+        model_id: "music_v1",
+        music_length_ms: durationMs,
+        force_instrumental: instrumental,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `ElevenLabs Music API error ${response.status}: ${errorText}`,
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
 export async function speechToText(
   audioBuffer: Buffer,
   filename: string,

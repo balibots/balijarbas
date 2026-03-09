@@ -12,7 +12,7 @@ import {
   cancelScheduledTask,
   cancelAllTasksForChat,
 } from "./scheduler.js";
-import { textToSpeech } from "./elevenlabs.js";
+import { textToSpeech, generateMusic } from "./elevenlabs.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
@@ -232,6 +232,42 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
               },
             },
             required: ["text", "chat_id"],
+          },
+        },
+        {
+          type: "function" as const,
+          name: "generate_music",
+          description:
+            "Generate music from a text description using ElevenLabs and send it as a Telegram audio file. Use this when the user asks you to generate, compose, or create music or a song.",
+          strict: false,
+          parameters: {
+            type: "object",
+            properties: {
+              prompt: {
+                type: "string",
+                description:
+                  "A text description of the music to generate (e.g., 'chill lo-fi beat with soft piano and rain sounds').",
+              },
+              chat_id: {
+                type: "number",
+                description: "The Telegram chat ID to send the audio to.",
+              },
+              reply_to_message_id: {
+                type: "number",
+                description: "Optional message ID to reply to.",
+              },
+              duration_seconds: {
+                type: "number",
+                description:
+                  "Duration of the generated music in seconds. Default 30, max 300.",
+              },
+              instrumental: {
+                type: "boolean",
+                description:
+                  "Whether to force instrumental music (no vocals). Default false.",
+              },
+            },
+            required: ["prompt", "chat_id"],
           },
         },
       ]
@@ -491,6 +527,46 @@ export async function handleToolCall(
         success: true,
         message: "All notes cleared.",
       });
+    }
+
+    case "generate_music": {
+      const {
+        prompt,
+        chat_id,
+        reply_to_message_id,
+        duration_seconds,
+        instrumental,
+      } = args as {
+        prompt: string;
+        chat_id: number;
+        reply_to_message_id?: number;
+        duration_seconds?: number;
+        instrumental?: boolean;
+      };
+      try {
+        const durationSec = Math.min(duration_seconds ?? 30, 300);
+        const buffer = await generateMusic(
+          prompt,
+          durationSec * 1000,
+          instrumental ?? false,
+        );
+        await ctx.api.sendAudio(
+          chat_id,
+          new InputFile(buffer, "music.mp3"),
+          {
+            title: prompt.slice(0, 64),
+            ...(reply_to_message_id && {
+              reply_parameters: { message_id: reply_to_message_id },
+            }),
+          },
+        );
+        return JSON.stringify({ success: true, message: "Music sent." });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error("generate_music error:", errorMessage);
+        return JSON.stringify({ success: false, error: errorMessage });
+      }
     }
 
     case "send_voice_reply": {

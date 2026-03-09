@@ -4,7 +4,7 @@ A prioritized list of potential enhancements for Balijarbas.
 
 ## 1. Persistent Scheduled Tasks
 
-**Priority:** High  
+**Priority:** High
 **Complexity:** Medium
 
 Currently, scheduled tasks are stored in memory and lost when the bot restarts. This should be persisted using Grammy's free storage (like notes/config) or a lightweight database.
@@ -16,24 +16,19 @@ Currently, scheduled tasks are stored in memory and lost when the bot restarts. 
 
 ---
 
-## 2. Multi-modal Message Support
+## ~~2. Multi-modal Message Support~~ Done
 
-**Priority:** High  
-**Complexity:** Medium
-
-Add support for processing images, voice messages, and documents. Both OpenAI and Gemini have vision and audio capabilities.
-
-**Features:**
-- Image analysis and description
-- Voice message transcription (Whisper API)
-- Document/PDF summarization
-- Image generation responses
+- [x] Image analysis and description
+- [x] Voice message transcription (ElevenLabs STT / Scribe v2)
+- [x] Voice note replies (ElevenLabs TTS)
+- [ ] Document/PDF summarization
+- [ ] Image generation responses
 
 ---
 
 ## 3. Streaming Responses
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Medium
 
 For longer responses, stream the output to Telegram instead of waiting for full completion. This improves perceived latency.
@@ -47,7 +42,7 @@ For longer responses, stream the output to Telegram instead of waiting for full 
 
 ## 4. Conversation Summarization
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Medium
 
 Instead of simply truncating old messages when the context limit is reached, summarize the conversation history to preserve important context.
@@ -62,7 +57,7 @@ Instead of simply truncating old messages when the context limit is reached, sum
 
 ## 5. Webhook Mode for Production
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Low
 
 Currently uses long polling. Webhook mode is more efficient and scalable for production deployments.
@@ -77,7 +72,7 @@ Currently uses long polling. Webhook mode is more efficient and scalable for pro
 
 ## 6. Enhanced Group Chat Features
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Medium
 
 Better handling of group chat dynamics with per-user context.
@@ -93,7 +88,7 @@ Better handling of group chat dynamics with per-user context.
 
 ## 7. Rate Limiting & Abuse Prevention
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Low
 
 Add rate limiting to prevent abuse, especially important when exposed publicly.
@@ -109,7 +104,7 @@ Add rate limiting to prevent abuse, especially important when exposed publicly.
 
 ## 8. Observability & Monitoring
 
-**Priority:** Medium  
+**Priority:** Medium
 **Complexity:** Medium
 
 Add structured logging, metrics, and health monitoring for production deployments.
@@ -125,7 +120,7 @@ Add structured logging, metrics, and health monitoring for production deployment
 
 ## 9. Testing Suite
 
-**Priority:** Low  
+**Priority:** Low
 **Complexity:** Medium
 
 Add comprehensive tests to ensure reliability and enable confident refactoring.
@@ -141,7 +136,7 @@ Add comprehensive tests to ensure reliability and enable confident refactoring.
 
 ## 10. Plugin Architecture
 
-**Priority:** Low  
+**Priority:** Low
 **Complexity:** High
 
 Make it easier to extend the bot with new capabilities via a plugin system.
@@ -156,8 +151,6 @@ Make it easier to extend the bot with new capabilities via a plugin system.
 ---
 
 ## Quick Wins (Bonus)
-
-These are smaller improvements that could be done quickly:
 
 - [ ] Add `/help` command showing available features
 - [ ] Add `/status` command showing bot uptime and stats
