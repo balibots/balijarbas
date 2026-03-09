@@ -19,6 +19,7 @@ import {
   getChatConfig,
   formatConfigForPrompt,
 } from "./tools.js";
+import { ELEVENLABS_API_KEY } from "./config.js";
 import { formatConversationHistory, addMessageToSession } from "./session.js";
 import { wasMentioned, isReplyToBot, getUserName } from "./helpers.js";
 
@@ -39,6 +40,11 @@ const BASE_SYSTEM_PROMPT = [
   "You can configure per-chat configuration settings using get_config, set_config, and reset_config tools. Use these when users want to customize how you behave in their chat.",
   "You can save notes, to-do items, or any context the user wants you to remember using add_note, list_notes, remove_note, and clear_notes tools. Notes are organized by keys/categories (e.g., 'shopping list', 'todos', 'birthdays'). Use these when users ask you to remember something, manage lists, or recall saved information.",
   "You can not do anything else - if the user asks you to do something you can't with the tools you have at your disposal, politely deny the request.",
+  ...(ELEVENLABS_API_KEY
+    ? [
+        "You have a send_voice_reply tool that converts text to speech and sends it as a Telegram voice message. Use it when the user asks for a voice reply or audio message. Write naturally and conversationally — avoid markdown or formatting. You still need sendMessage for text replies. When replying with voice, don't also send a text message unless asked.",
+      ]
+    : []),
 ].join(" ");
 
 function buildSystemPrompt(ctx: MyContext): string {
@@ -198,6 +204,24 @@ export async function decideAndAct(
           "assistant",
           ctx.me?.first_name ?? "Bot",
           args.text ?? "",
+        );
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    // Record voice messages in session
+    const voiceCalls = functionCalls.filter(
+      (tc) => tc.name === "send_voice_reply",
+    );
+    for (const call of voiceCalls) {
+      try {
+        const args = JSON.parse(call.arguments);
+        addMessageToSession(
+          ctx,
+          "assistant",
+          ctx.me?.first_name ?? "Bot",
+          `[Voice message]: ${args.text ?? ""}`,
         );
       } catch {
         // Ignore parse errors

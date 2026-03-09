@@ -18,6 +18,13 @@ export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 export const MCP_URL = `${process.env.TELEGRAM_MCP_HOST}/mcp`;
 export const MCP_API_KEY = process.env.TELEGRAM_MCP_API_KEY;
 
+// ElevenLabs TTS Configuration
+export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+export const ELEVENLABS_DEFAULT_VOICE_ID =
+  process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb";
+export const ELEVENLABS_MODEL_ID =
+  process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2";
+
 // Session Configuration
 export const MAX_CONTEXT_MESSAGES = 5;
 

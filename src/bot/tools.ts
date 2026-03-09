@@ -1,11 +1,18 @@
 import { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
-import { MCP_URL, MCP_API_KEY } from "./config.js";
+import { InputFile } from "grammy";
+import {
+  MCP_URL,
+  MCP_API_KEY,
+  ELEVENLABS_API_KEY,
+  ELEVENLABS_DEFAULT_VOICE_ID,
+} from "./config.js";
 import {
   createScheduledTask,
   listScheduledTasks,
   cancelScheduledTask,
   cancelAllTasksForChat,
 } from "./scheduler.js";
+import { textToSpeech } from "./elevenlabs.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
@@ -194,6 +201,41 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
       required: [],
     },
   },
+  ...(ELEVENLABS_API_KEY
+    ? [
+        {
+          type: "function" as const,
+          name: "send_voice_reply",
+          description:
+            "Convert text to speech using ElevenLabs and send it as a Telegram voice message. Use this when the user asks for a voice reply or audio message.",
+          strict: false,
+          parameters: {
+            type: "object",
+            properties: {
+              text: {
+                type: "string",
+                description:
+                  "The text to convert to speech. Write naturally and conversationally — avoid markdown or formatting.",
+              },
+              chat_id: {
+                type: "number",
+                description: "The Telegram chat ID to send the voice message to.",
+              },
+              reply_to_message_id: {
+                type: "number",
+                description:
+                  "Optional message ID to reply to.",
+              },
+              voice_id: {
+                type: "string",
+                description: `Optional ElevenLabs voice ID. Defaults to ${ELEVENLABS_DEFAULT_VOICE_ID}.`,
+              },
+            },
+            required: ["text", "chat_id"],
+          },
+        },
+      ]
+    : []),
   {
     type: "mcp",
     server_label: "telegram-mcp",
@@ -449,6 +491,33 @@ export async function handleToolCall(
         success: true,
         message: "All notes cleared.",
       });
+    }
+
+    case "send_voice_reply": {
+      const { text, chat_id, reply_to_message_id, voice_id } = args as {
+        text: string;
+        chat_id: number;
+        reply_to_message_id?: number;
+        voice_id?: string;
+      };
+      try {
+        const audioBuffer = await textToSpeech(text, voice_id);
+        await ctx.api.sendVoice(
+          chat_id,
+          new InputFile(audioBuffer, "voice.ogg"),
+          {
+            ...(reply_to_message_id && {
+              reply_parameters: { message_id: reply_to_message_id },
+            }),
+          },
+        );
+        return JSON.stringify({ success: true, message: "Voice message sent." });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error("send_voice_reply error:", errorMessage);
+        return JSON.stringify({ success: false, error: errorMessage });
+      }
     }
 
     default:
