@@ -177,13 +177,13 @@ export async function decideAndAct(
       );
 
       // Continue the loop to let the model respond
-      if (numToolsCalled <= MAX_TOOL_CALLS) {
-        continue;
-      } else {
+      if (numToolsCalled >= MAX_TOOL_CALLS) {
         console.warn(
-          `Maximum number of tools called (${numToolsCalled}) reached.`,
+          `Maximum number of tools called (${numToolsCalled}) reached, stopping loop.`,
         );
+        break;
       }
+      continue;
     }
 
     // Find any sendMessage MCP calls
