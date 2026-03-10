@@ -259,7 +259,7 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
               duration_seconds: {
                 type: "number",
                 description:
-                  "Duration of the generated music in seconds. Default 30, max 300.",
+                  "Duration of the generated music in seconds. Default 30, max 60.",
               },
               instrumental: {
                 type: "boolean",
@@ -544,7 +544,7 @@ export async function handleToolCall(
         instrumental?: boolean;
       };
       try {
-        const durationSec = Math.min(duration_seconds ?? 30, 300);
+        const durationSec = Math.min(duration_seconds ?? 30, 60);
         const buffer = await generateMusic(
           prompt,
           durationSec * 1000,
