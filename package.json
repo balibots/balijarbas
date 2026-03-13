@@ -22,7 +22,7 @@
     "dotenv": "^17.2.3",
     "grammy": "^1.39.2",
     "node-schedule": "^2.1.1",
-    "openai": "^6.16.0",
+    "openai": "6.27",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0"
   },

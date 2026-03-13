@@ -12,12 +12,17 @@ import {
   cancelScheduledTask,
   cancelAllTasksForChat,
 } from "./scheduler.js";
-import { textToSpeech, generateMusic, findVoiceForLanguage } from "./elevenlabs.js";
+import {
+  textToSpeech,
+  generateMusic,
+  findVoiceForLanguage,
+} from "./elevenlabs.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
 export const tools: ResponseCreateParamsNonStreaming["tools"] = [
   { type: "web_search" },
+  { type: "tool_search" },
   {
     type: "function",
     name: "schedule_task",
@@ -219,12 +224,12 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
               },
               chat_id: {
                 type: "number",
-                description: "The Telegram chat ID to send the voice message to.",
+                description:
+                  "The Telegram chat ID to send the voice message to.",
               },
               reply_to_message_id: {
                 type: "number",
-                description:
-                  "Optional message ID to reply to.",
+                description: "Optional message ID to reply to.",
               },
               voice_id: {
                 type: "string",
@@ -565,16 +570,12 @@ export async function handleToolCall(
           durationSec * 1000,
           instrumental ?? false,
         );
-        await ctx.api.sendAudio(
-          chat_id,
-          new InputFile(buffer, "music.mp3"),
-          {
-            title: prompt.slice(0, 64),
-            ...(reply_to_message_id && {
-              reply_parameters: { message_id: reply_to_message_id },
-            }),
-          },
-        );
+        await ctx.api.sendAudio(chat_id, new InputFile(buffer, "music.mp3"), {
+          title: prompt.slice(0, 64),
+          ...(reply_to_message_id && {
+            reply_parameters: { message_id: reply_to_message_id },
+          }),
+        });
         return JSON.stringify({ success: true, message: "Music sent." });
       } catch (error) {
         const errorMessage =
@@ -585,7 +586,15 @@ export async function handleToolCall(
     }
 
     case "send_voice_reply": {
-      const { text, chat_id, reply_to_message_id, voice_id, language, accent, language_code } = args as {
+      const {
+        text,
+        chat_id,
+        reply_to_message_id,
+        voice_id,
+        language,
+        accent,
+        language_code,
+      } = args as {
         text: string;
         chat_id: number;
         reply_to_message_id?: number;
@@ -598,9 +607,15 @@ export async function handleToolCall(
         // If language is specified and no explicit voice_id, find a native voice
         let resolvedVoiceId = voice_id;
         if (!resolvedVoiceId && language) {
-          resolvedVoiceId = (await findVoiceForLanguage(language, accent)) ?? undefined;
+          resolvedVoiceId =
+            (await findVoiceForLanguage(language, accent)) ?? undefined;
         }
-        const audioBuffer = await textToSpeech(text, resolvedVoiceId, undefined, language_code);
+        const audioBuffer = await textToSpeech(
+          text,
+          resolvedVoiceId,
+          undefined,
+          language_code,
+        );
         await ctx.api.sendVoice(
           chat_id,
           new InputFile(audioBuffer, "voice.ogg"),
@@ -610,7 +625,10 @@ export async function handleToolCall(
             }),
           },
         );
-        return JSON.stringify({ success: true, message: "Voice message sent." });
+        return JSON.stringify({
+          success: true,
+          message: "Voice message sent.",
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);

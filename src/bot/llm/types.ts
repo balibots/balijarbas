@@ -24,7 +24,11 @@ export interface WebSearchTool {
   type: "web_search";
 }
 
-export type Tool = FunctionTool | McpTool | WebSearchTool;
+export interface ToolSearchTool {
+  type: "tool_search";
+}
+
+export type Tool = FunctionTool | McpTool | WebSearchTool | ToolSearchTool;
 
 // Message types for conversation
 export interface SystemMessage {

@@ -102,6 +102,8 @@ export class OpenAIProvider implements LLMProvider {
         };
       } else if (tool.type === "web_search") {
         return { type: "web_search" as const };
+      } else if (tool.type === "tool_search") {
+        return { type: "tool_search" as const };
       }
       throw new Error(`Unknown tool type: ${(tool as Tool).type}`);
     });
