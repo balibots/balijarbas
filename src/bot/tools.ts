@@ -230,6 +230,11 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
                 type: "string",
                 description: `Optional ElevenLabs voice ID. Defaults to ${ELEVENLABS_DEFAULT_VOICE_ID}.`,
               },
+              language_code: {
+                type: "string",
+                description:
+                  "Optional language code for speech generation (e.g. 'en', 'es', 'fr', 'ja', 'tl'). Helps the model pronounce the text correctly.",
+              },
             },
             required: ["text", "chat_id"],
           },
@@ -570,14 +575,15 @@ export async function handleToolCall(
     }
 
     case "send_voice_reply": {
-      const { text, chat_id, reply_to_message_id, voice_id } = args as {
+      const { text, chat_id, reply_to_message_id, voice_id, language_code } = args as {
         text: string;
         chat_id: number;
         reply_to_message_id?: number;
         voice_id?: string;
+        language_code?: string;
       };
       try {
-        const audioBuffer = await textToSpeech(text, voice_id);
+        const audioBuffer = await textToSpeech(text, voice_id, undefined, language_code);
         await ctx.api.sendVoice(
           chat_id,
           new InputFile(audioBuffer, "voice.ogg"),
