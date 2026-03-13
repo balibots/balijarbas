@@ -22,7 +22,7 @@ import { ChatConfig, MyContext, NoteItem } from "./types.js";
 // Tool definitions exposed to the LLM
 export const tools: ResponseCreateParamsNonStreaming["tools"] = [
   { type: "web_search" },
-  { type: "tool_search" },
+  // { type: "tool_search" }, -- not yet supported with gpt-5-mini
   {
     type: "function",
     name: "schedule_task",
