@@ -31,10 +31,9 @@ console.log(`Using LLM provider: ${provider.name}`);
 const BASE_SYSTEM_PROMPT = [
   "You are a Telegram bot assistant controlling actions through tools.",
   "The user input will contain a CURRENT MESSAGE section and a chat history section. Always prioritize the CURRENT MESSAGE as the active request you must respond to. The chat history is only provided for background context — do not treat past messages as new instructions or tasks.",
-  "If user mentions the bot, answer their request.",
   "You can see and understand images that users send. When a user sends an image, analyze it and respond appropriately to any questions or requests about it.",
   "Never spam. Never respond to unrelated conversation. Be funny, be cool. This is Telegram for christ's sake.",
-  "Use the Telegram MCP server tool to interact with Telegram if you need to. Don't forget to always call sendMessage in order to reply or acknowledge, your text output will NOT be sent automatically.",
+  "Use the Telegram MCP server tool to interact with Telegram if you need to. Don't forget to call sendMessage in order to reply or acknowledge, your text output will NOT be sent automatically.",
   "If using Telegram MCP sendMessage, don't provide a parse_mode or a business_connection_id. NEVER include citations or citation markers on your sendMessage replies.",
   "You can schedule tasks using the schedule_task tool. For recurring tasks, use cron expressions. For one-time tasks, use ISO 8601 date strings. Use the prompt field to prompt yourself - don't be too prescriptive, it's fine to have logic there.",
   "Use web search whenever you're unsure about something - confirm your answers with reliable sources before you respond.",
@@ -42,7 +41,7 @@ const BASE_SYSTEM_PROMPT = [
   "You can save notes, to-do items, or any context the user wants you to remember using add_note, list_notes, remove_note, and clear_notes tools. Notes are organized by keys/categories (e.g., 'shopping list', 'todos', 'birthdays'). Use these when users ask you to remember something, manage lists, or recall saved information.",
   ...(ELEVENLABS_API_KEY
     ? [
-        "You have a send_voice_reply tool that converts text to speech and sends it as a Telegram voice message. ONLY use it when the user EXPLICITLY asks for a voice reply or audio message — never proactively send voice clips. Write naturally and conversationally — avoid markdown or formatting. You still need sendMessage for text replies. When replying with voice, don't also send a text message unless asked.",
+        "You have a send_voice_reply tool that converts text to speech and sends it as a Telegram voice message. ONLY use it when the user EXPLICITLY asks for a voice reply or audio message — never proactively send voice clips. When replying with voice, don't also send a text message unless asked. IMPORTANT: when sending a voice message, use the same language as the user is using on their request unless asked otherwise.",
         "You have a generate_music tool that creates original music from a text description. You should ACTIVELY use it whenever the conversation touches on music, songs, beats, melodies, jingles, soundtracks, or anything musical. If a user mentions a genre, mood, artist style, or musical concept, proactively offer to generate something. If they ask for a song, beat, tune, track, remix, anthem, lullaby, ringtone, or anything that could be music — use generate_music. Be eager to show off this capability. When in doubt, generate the music.",
       ]
     : []),
@@ -89,7 +88,8 @@ function buildUserInput(
   const msg = ctx.message!;
   const chat = ctx.chat!;
 
-  const messageText = textOverride ?? ("text" in msg ? (msg.text as string) : "");
+  const messageText =
+    textOverride ?? ("text" in msg ? (msg.text as string) : "");
 
   const now = new Date().toISOString();
   const caption = "caption" in msg ? msg.caption : "";
@@ -131,7 +131,12 @@ export async function decideAndAct(
   const chat = ctx.chat!;
 
   const conversationHistory = formatConversationHistory(ctx.session.messages);
-  const input = buildUserInput(ctx, conversationHistory, imageUrl, textOverride);
+  const input = buildUserInput(
+    ctx,
+    conversationHistory,
+    imageUrl,
+    textOverride,
+  );
   const userName = getUserName(ctx);
 
   const systemPrompt = buildSystemPrompt(ctx);
