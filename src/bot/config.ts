@@ -12,7 +12,7 @@ export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 
 // Google Gemini Configuration
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3-flash";
 
 // MCP Server Configuration
 export const MCP_URL = `${process.env.TELEGRAM_MCP_HOST}/mcp`;

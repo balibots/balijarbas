@@ -19,7 +19,7 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4.1-mini}
       # Google Gemini (required if LLM_PROVIDER=gemini)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3-flash}
     ports:
       - "3001:3001"
     healthcheck:

@@ -73,7 +73,7 @@ OPENAI_MODEL=gpt-4.1-mini             # Optional, defaults to gpt-4.1-mini
 
 # Google Gemini Configuration (required if LLM_PROVIDER=gemini)
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash         # Optional, defaults to gemini-2.5-flash
+GEMINI_MODEL=gemini-3-flash         # Optional, defaults to gemini-3-flash
 
 # Optional
 MCP_HTTP_PORT=3001                    # Port for the MCP server (default: 3001)
@@ -88,7 +88,7 @@ The bot supports multiple LLM providers via the `@google/genai` and `openai` SDK
 | Provider | Models | Function Tools | Google Search | MCP Tools |
 |----------|--------|----------------|---------------|-----------|
 | OpenAI | gpt-4.1-mini, gpt-4o, etc. | ✅ | ✅ (web_search) | ✅ |
-| Gemini | gemini-2.5-flash, gemini-2.5-pro | ✅ | ✅ (grounding) | ⚠️ Limited |
+| Gemini | gemini-3-flash, gemini-2.5-pro | ✅ | ✅ (grounding) | ⚠️ Limited |
 
 **Notes:**
 - Both providers support function calling for custom tools (scheduling, notes, config)
