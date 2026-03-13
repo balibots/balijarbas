@@ -8,6 +8,7 @@ export async function textToSpeech(
   text: string,
   voiceId?: string,
   modelId?: string,
+  languageCode?: string,
 ): Promise<Buffer> {
   const voice = voiceId ?? ELEVENLABS_DEFAULT_VOICE_ID;
   const model = modelId ?? ELEVENLABS_MODEL_ID;
@@ -20,7 +21,11 @@ export async function textToSpeech(
         "xi-api-key": ELEVENLABS_API_KEY!,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ text, model_id: model }),
+      body: JSON.stringify({
+        text,
+        model_id: model,
+        ...(languageCode && { language_code: languageCode }),
+      }),
     },
   );
 
