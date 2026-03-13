@@ -21,7 +21,7 @@ export const MCP_API_KEY = process.env.TELEGRAM_MCP_API_KEY;
 // ElevenLabs TTS Configuration
 export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 export const ELEVENLABS_DEFAULT_VOICE_ID =
-  process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb";
+  process.env.ELEVENLABS_DEFAULT_VOICE_ID ?? "aLFUti4k8YKvtQGXv0UO";
 export const ELEVENLABS_MODEL_ID =
   process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2";
 
