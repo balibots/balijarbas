@@ -45,7 +45,8 @@ export function formatConversationHistory(messages: ChatMessage[]): string {
     .slice(0, -1)
     .map((msg) => {
       const imageNote = msg.hasImage ? " [sent an image]" : "";
-      return `[${msg.role}] ${msg.name}: ${msg.content}${imageNote}`;
+      const time = new Date(msg.timestamp).toISOString();
+      return `[${time}] [${msg.role}] ${msg.name}: ${msg.content}${imageNote}`;
     })
     .join("\n");
 }
