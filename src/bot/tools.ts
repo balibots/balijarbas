@@ -12,7 +12,7 @@ import {
   cancelScheduledTask,
   cancelAllTasksForChat,
 } from "./scheduler.js";
-import { textToSpeech, generateMusic } from "./elevenlabs.js";
+import { textToSpeech, generateMusic, findVoiceForLanguage } from "./elevenlabs.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
@@ -228,12 +228,22 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
               },
               voice_id: {
                 type: "string",
-                description: `Optional ElevenLabs voice ID. Defaults to ${ELEVENLABS_DEFAULT_VOICE_ID}.`,
+                description: `Optional ElevenLabs voice ID. Overrides automatic voice selection. Defaults to ${ELEVENLABS_DEFAULT_VOICE_ID}.`,
+              },
+              language: {
+                type: "string",
+                description:
+                  "Language for voice selection (e.g. 'Portuguese', 'Spanish', 'Japanese', 'French'). When provided, searches the ElevenLabs voice library for a native voice trained on this language.",
+              },
+              accent: {
+                type: "string",
+                description:
+                  "Optional accent to narrow voice selection (e.g. 'European' for European Portuguese, 'Brazilian' for Brazilian Portuguese, 'Castilian' for Castilian Spanish). Only used together with language.",
               },
               language_code: {
                 type: "string",
                 description:
-                  "Optional language code for speech generation (e.g. 'en', 'es', 'fr', 'ja', 'tl'). Helps the model pronounce the text correctly.",
+                  "Optional ISO 639-1 language code (e.g. 'pt', 'es', 'ja') passed to the TTS API for correct pronunciation. Inferred automatically if language is provided.",
               },
             },
             required: ["text", "chat_id"],
@@ -575,15 +585,22 @@ export async function handleToolCall(
     }
 
     case "send_voice_reply": {
-      const { text, chat_id, reply_to_message_id, voice_id, language_code } = args as {
+      const { text, chat_id, reply_to_message_id, voice_id, language, accent, language_code } = args as {
         text: string;
         chat_id: number;
         reply_to_message_id?: number;
         voice_id?: string;
+        language?: string;
+        accent?: string;
         language_code?: string;
       };
       try {
-        const audioBuffer = await textToSpeech(text, voice_id, undefined, language_code);
+        // If language is specified and no explicit voice_id, find a native voice
+        let resolvedVoiceId = voice_id;
+        if (!resolvedVoiceId && language) {
+          resolvedVoiceId = (await findVoiceForLanguage(language, accent)) ?? undefined;
+        }
+        const audioBuffer = await textToSpeech(text, resolvedVoiceId, undefined, language_code);
         await ctx.api.sendVoice(
           chat_id,
           new InputFile(audioBuffer, "voice.ogg"),

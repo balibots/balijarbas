@@ -4,6 +4,96 @@ import {
   ELEVENLABS_MODEL_ID,
 } from "./config.js";
 
+// Cache: "language|accent" -> voice_id (already added to our account)
+const voiceCache = new Map<string, string>();
+
+interface SharedVoice {
+  voice_id: string;
+  public_owner_id: string;
+  name: string;
+  accent: string | null;
+  language: string | null;
+  category: string | null;
+}
+
+interface SharedVoicesResponse {
+  voices: SharedVoice[];
+  has_more: boolean;
+}
+
+/**
+ * Search the ElevenLabs shared voice library for a voice matching the given
+ * language and optional accent, add it to our account, and return its voice_id.
+ * Results are cached in-memory so subsequent calls reuse the same voice.
+ * Returns null if no matching voice is found.
+ */
+export async function findVoiceForLanguage(
+  language: string,
+  accent?: string,
+): Promise<string | null> {
+  const cacheKey = `${language.toLowerCase()}|${(accent ?? "").toLowerCase()}`;
+  const cached = voiceCache.get(cacheKey);
+  if (cached) return cached;
+
+  const params = new URLSearchParams({
+    page_size: "5",
+    language,
+    ...(accent && { accent }),
+  });
+
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/shared-voices?${params}`,
+    {
+      headers: { "xi-api-key": ELEVENLABS_API_KEY! },
+    },
+  );
+
+  if (!response.ok) {
+    console.error(
+      `ElevenLabs shared-voices search failed (${response.status}): ${await response.text()}`,
+    );
+    return null;
+  }
+
+  const data = (await response.json()) as SharedVoicesResponse;
+  if (data.voices.length === 0) {
+    // If accent search returned nothing, retry with just the language
+    if (accent) return findVoiceForLanguage(language);
+    return null;
+  }
+
+  const voice = data.voices[0];
+
+  // Add the shared voice to our account
+  const addResponse = await fetch(
+    `https://api.elevenlabs.io/v1/voices/add/${voice.public_owner_id}/${voice.voice_id}`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ new_name: `${voice.name} (${language}${accent ? ` - ${accent}` : ""})` }),
+    },
+  );
+
+  if (!addResponse.ok) {
+    console.error(
+      `ElevenLabs add-voice failed (${addResponse.status}): ${await addResponse.text()}`,
+    );
+    return null;
+  }
+
+  const addData = (await addResponse.json()) as { voice_id: string };
+  const addedVoiceId = addData.voice_id;
+
+  voiceCache.set(cacheKey, addedVoiceId);
+  console.log(
+    `Added shared voice "${voice.name}" (${addedVoiceId}) for ${language}${accent ? ` / ${accent}` : ""}`,
+  );
+  return addedVoiceId;
+}
+
 export async function textToSpeech(
   text: string,
   voiceId?: string,
