@@ -89,7 +89,7 @@ interface LLMProvider {
 | Provider | Environment Variable | Default Model | MCP Support | Web Search | SDK |
 |----------|---------------------|---------------|-------------|------------|-----|
 | OpenAI   | `OPENAI_API_KEY`    | gpt-5-mini  | ✅ Yes      | ✅ Yes     | `openai` |
-| Gemini   | `GEMINI_API_KEY`    | gemini-2.5-flash | ⚠️ Limited | ✅ Yes (Google Search grounding) | `@google/genai` |
+| Gemini   | `GEMINI_API_KEY`    | gemini-3-flash | ⚠️ Limited | ✅ Yes (Google Search grounding) | `@google/genai` |
 
 ### Provider Selection
 

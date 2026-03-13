@@ -35,7 +35,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(config: GeminiProviderConfig) {
     this.client = new GoogleGenAI({ apiKey: config.apiKey });
-    this.defaultModel = config.defaultModel ?? "gemini-2.5-flash";
+    this.defaultModel = config.defaultModel ?? "gemini-3-flash";
   }
 
   async complete(
