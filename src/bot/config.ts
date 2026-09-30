@@ -28,8 +28,12 @@ export const ELEVENLABS_MODEL_ID =
 // Session Configuration
 export const MAX_CONTEXT_MESSAGES = 5;
 
+// Redis Configuration
+export const REDIS_URL = process.env.REDIS_URL;
+
 // Validation
 if (!BOT_TOKEN) throw new Error("Missing TELEGRAM_BOT_TOKEN");
+if (!REDIS_URL) throw new Error("Missing REDIS_URL");
 if (!process.env.TELEGRAM_MCP_HOST)
   throw new Error("Missing TELEGRAM_MCP_HOST");
 

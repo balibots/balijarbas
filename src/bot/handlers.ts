@@ -1,5 +1,6 @@
-import { Bot, session, StorageAdapter } from "grammy";
-import { freeStorage } from "@grammyjs/storage-free";
+import { Bot, session } from "grammy";
+import { RedisAdapter } from "@grammyjs/storage-redis";
+import { Redis } from "ioredis";
 import { MyContext, SessionData } from "./types.js";
 import {
   createInitialSession,
@@ -15,19 +16,18 @@ import {
   downloadTelegramImage,
   downloadTelegramFile,
 } from "./helpers.js";
-import { ELEVENLABS_API_KEY } from "./config.js";
+import { ELEVENLABS_API_KEY, REDIS_URL } from "./config.js";
 import { speechToText } from "./elevenlabs.js";
 import { decideAndAct, processInlineQuery } from "./llm.js";
 import { InlineQueryResultArticle } from "grammy/types";
 
 export function setupHandlers(bot: Bot<MyContext>): void {
-  // Initialize session middleware with free persistent storage
+  // Initialize session middleware with Redis persistent storage
+  const redis = new Redis(REDIS_URL!);
   bot.use(
     session({
       initial: createInitialSession,
-      storage: freeStorage<SessionData>(
-        bot.token,
-      ) as unknown as StorageAdapter<SessionData>,
+      storage: new RedisAdapter<SessionData>({ instance: redis }),
     }),
   );
 

@@ -18,9 +18,10 @@
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
     "@google/genai": "^1.37.0",
-    "@grammyjs/storage-free": "^2.5.1",
+    "@grammyjs/storage-redis": "^2.5.1",
     "dotenv": "^17.2.3",
     "grammy": "^1.39.2",
+    "ioredis": "^5.4.1",
     "node-schedule": "^2.1.1",
     "openai": "6.27",
     "prettier": "^3.7.4",
