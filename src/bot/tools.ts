@@ -18,6 +18,7 @@ import {
   findVoiceForLanguage,
 } from "./elevenlabs.js";
 import { addMessageToSession } from "./session.js";
+import { OPS_TOOL_NAMES, handleOpsToolCall } from "./ops.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
@@ -369,6 +370,10 @@ export async function handleToolCall(
 ): Promise<string> {
   const chatId = ctx.chat!.id;
   console.log(`Handling tool call: ${toolName} - ${JSON.stringify(args)}`);
+
+  if (OPS_TOOL_NAMES.has(toolName)) {
+    return handleOpsToolCall(toolName, args, ctx);
+  }
 
   switch (toolName) {
     case "schedule_task": {

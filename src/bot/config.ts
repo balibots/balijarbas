@@ -25,6 +25,17 @@ export const ELEVENLABS_DEFAULT_VOICE_ID =
 export const ELEVENLABS_MODEL_ID =
   process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2";
 
+// Ops Configuration (admin-only access to own code, logs and infra)
+export const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "")
+  .split(",")
+  .map((id) => Number(id.trim()))
+  .filter((id) => Number.isInteger(id) && id > 0);
+export const GITHUB_MCP_TOKEN = process.env.GITHUB_MCP_TOKEN;
+export const GITHUB_REPO = process.env.GITHUB_REPO ?? "balibots/balijarbas";
+export const FLY_API_TOKEN = process.env.FLY_API_TOKEN;
+// Fly sets FLY_APP_NAME automatically on its machines
+export const FLY_APP_NAME = process.env.FLY_APP_NAME ?? "balijarbas";
+
 // Session Configuration
 export const MAX_CONTEXT_MESSAGES = 5;
 
