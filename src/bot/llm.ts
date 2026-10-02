@@ -20,6 +20,7 @@ import {
   formatConfigForPrompt,
 } from "./tools.js";
 import { ELEVENLABS_API_KEY } from "./config.js";
+import { isOpsEnabled, getOpsTools, getOpsPrompt } from "./ops.js";
 import { formatConversationHistory, addMessageToSession } from "./session.js";
 import { wasMentioned, isReplyToBot, getUserName } from "./helpers.js";
 
@@ -57,6 +58,10 @@ function buildSystemPrompt(ctx: MyContext): string {
   const configPrompt = formatConfigForPrompt(config);
   if (configPrompt) {
     parts.push(`\n\n${configPrompt}`);
+  }
+
+  if (isOpsEnabled(ctx)) {
+    parts.push(`\n\n${getOpsPrompt()}`);
   }
 
   // Add notes context if any exist - removed this - expect the model to get this through the tool call if it needs it
@@ -149,7 +154,10 @@ export async function decideAndAct(
   ];
 
   // Convert tool definitions to the common format
-  const tools: Tool[] = toolDefinitions as unknown as Tool[];
+  const tools: Tool[] = [
+    ...toolDefinitions!,
+    ...(isOpsEnabled(ctx) ? getOpsTools() : []),
+  ] as unknown as Tool[];
 
   // Loop to handle tool calls
   const MAX_TOOL_CALLS = 8;
