@@ -17,12 +17,40 @@ import {
   generateMusic,
   findVoiceForLanguage,
 } from "./elevenlabs.js";
+import { addMessageToSession } from "./session.js";
 import { ChatConfig, MyContext, NoteItem } from "./types.js";
 
 // Tool definitions exposed to the LLM
 export const tools: ResponseCreateParamsNonStreaming["tools"] = [
   { type: "web_search" },
-  // { type: "tool_search" }, -- not yet enabled
+  // Lets the model load the deferred Telegram MCP tools on demand
+  { type: "tool_search" },
+  {
+    // First-class (non-deferred) since nearly every turn needs it
+    type: "function",
+    name: "send_message",
+    description:
+      "Send a text message to a Telegram chat. This is how you reply to users - your text output is NOT sent automatically.",
+    strict: false,
+    parameters: {
+      type: "object",
+      properties: {
+        chat_id: {
+          type: "number",
+          description: "The Telegram chat ID to send the message to.",
+        },
+        text: {
+          type: "string",
+          description: "The message text. Plain text, no citations.",
+        },
+        reply_to_message_id: {
+          type: "number",
+          description: "Optional message ID to reply to.",
+        },
+      },
+      required: ["chat_id", "text"],
+    },
+  },
   {
     type: "function",
     name: "schedule_task",
@@ -295,9 +323,11 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
   {
     type: "mcp",
     server_label: "telegram-mcp",
-    server_description: "A Telegram MCP server exposing telegram functionality",
+    server_description:
+      "A Telegram MCP server exposing the full Telegram Bot API (reactions, polls, photos, pinning, editing/deleting messages, chat admin, etc). Search it for anything beyond plain text replies.",
     server_url: MCP_URL,
     require_approval: "never",
+    defer_loading: true,
     ...(MCP_API_KEY && {
       headers: {
         Authorization: `Bearer ${MCP_API_KEY}`,
@@ -581,6 +611,38 @@ export async function handleToolCall(
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         console.error("generate_music error:", errorMessage);
+        return JSON.stringify({ success: false, error: errorMessage });
+      }
+    }
+
+    case "send_message": {
+      const { chat_id, text, reply_to_message_id } = args as {
+        chat_id: number;
+        text: string;
+        reply_to_message_id?: number;
+      };
+      try {
+        const sent = await ctx.api.sendMessage(chat_id, text, {
+          ...(reply_to_message_id && {
+            reply_parameters: { message_id: reply_to_message_id },
+          }),
+        });
+        if (chat_id === chatId) {
+          addMessageToSession(
+            ctx,
+            "assistant",
+            ctx.me?.first_name ?? "Bot",
+            text,
+          );
+        }
+        return JSON.stringify({
+          success: true,
+          message_id: sent.message_id,
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error("send_message error:", errorMessage);
         return JSON.stringify({ success: false, error: errorMessage });
       }
     }

@@ -167,18 +167,18 @@ Tools provided by the Telegram MCP server for interacting with Telegram's API.
   server_label: "telegram-mcp",
   server_url: MCP_URL,
   require_approval: "never",
+  defer_loading: true,
 }
 ```
 
-**Available Actions:**
-- `sendMessage` - Send messages to chats
-- Other Telegram API methods exposed by the MCP server
+The MCP server is **deferred**: its ~162 method definitions are not sent up front. The `tool_search` tool lets the model load the ones it needs on demand (reactions, polls, photos, pinning, etc.). Plain text replies go through the first-class `send_message` function tool instead, so the common path never needs a search.
 
 ### Built-in Tools (OpenAI)
 Native tools provided by the OpenAI API.
 
 ```typescript
 { type: "web_search" }
+{ type: "tool_search" } // loads deferred MCP tools on demand
 ```
 
 ### Function Tools (Custom)
@@ -186,6 +186,7 @@ Custom tools implemented locally with handlers in `handleToolCall()`.
 
 | Tool | Purpose | Parameters |
 |------|---------|------------|
+| `send_message` | Send a text reply (first-class, not deferred) | `chat_id`, `text`, `reply_to_message_id?` |
 | `schedule_task` | Create scheduled tasks | `prompt`, `schedule`, `recurring` |
 | `list_tasks` | List scheduled tasks | - |
 | `cancel_task` | Cancel a task | `task_id` |
@@ -308,7 +309,7 @@ The agent is instructed to:
 2. **Be contextual** - Only respond when mentioned or replied to in groups
 3. **Be accurate** - Use web search to verify information
 4. **Be non-intrusive** - Never spam or respond to unrelated conversation
-5. **Use tools** - Always call `sendMessage` to actually send responses
+5. **Use tools** - Always call `send_message` to actually send responses
 
 ## Extension Points
 
