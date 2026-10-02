@@ -79,7 +79,23 @@ GEMINI_MODEL=gemini-3-flash         # Optional, defaults to gemini-3-flash
 MCP_HTTP_PORT=3001                    # Port for the MCP server (default: 3001)
 MCP_API_KEY=your_mcp_api_key          # API key for MCP server authentication
 CORS_ORIGIN=*                         # CORS allowed origins
+
+# Ops mode (optional) - admin-only, read-only access to own code, logs and infra
+ADMIN_USER_IDS=123456789              # Comma-separated Telegram user IDs
+GITHUB_MCP_TOKEN=github_pat_...       # Fine-grained PAT, read-only, scoped to this repo
+GITHUB_REPO=balibots/balijarbas       # Optional, defaults to balibots/balijarbas
+FLY_API_TOKEN="FlyV1 ..."             # From `fly tokens create readonly`
 ```
+
+### Ops Mode
+
+When an admin (listed in `ADMIN_USER_IDS`) talks to the bot **in a private chat**, it gets extra read-only tools:
+
+- `get_recent_logs` - the last ~2000 log lines from the bot and MCP server since the last restart, with secrets redacted
+- `get_infra_status` - Fly.io machine state, health checks and recent events like crashes and OOM kills (needs `FLY_API_TOKEN`)
+- GitHub MCP (deferred, read-only) - files, commits, issues, PRs and Actions runs (needs `GITHUB_MCP_TOKEN`)
+
+Nobody else ever sees these tools, and they are never offered in group chats.
 
 ### LLM Providers
 

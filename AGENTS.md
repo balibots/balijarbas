@@ -198,6 +198,17 @@ Custom tools implemented locally with handlers in `handleToolCall()`.
 | `set_config` | Update configuration | `custom_prompt?`, `language?`, `personality?` |
 | `reset_config` | Reset to defaults | - |
 
+### Ops Tools (Admin Only)
+Defined in `src/bot/ops.ts`. Only added to the tool list when `isOpsEnabled(ctx)`: the sender is in `ADMIN_USER_IDS` **and** the chat is private. `handleOpsToolCall()` re-checks this and logs every call with `[ops]`.
+
+| Tool | Purpose | Requires |
+|------|---------|----------|
+| `get_recent_logs` | Read the in-memory log buffer (`src/bot/logbuffer.ts`) | - |
+| `get_infra_status` | Fly Machines API: state, checks, recent events | `FLY_API_TOKEN` |
+| `github` (MCP, deferred) | Read-only access to the repo via `api.githubcopilot.com/mcp/` | `GITHUB_MCP_TOKEN` |
+
+The log buffer captures console output from the main process and the MCP child (whose stdout/stderr are piped through the parent) and redacts secrets. It must be the first import in `src/index.ts`.
+
 ## Agent Loop
 
 The main agent uses an iterative loop pattern:

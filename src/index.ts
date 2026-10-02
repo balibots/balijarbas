@@ -1,3 +1,5 @@
+// Must be imported first so it captures all console output
+import { createStreamLogger } from "./bot/logbuffer.js";
 import { fork, ChildProcess } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -21,11 +23,23 @@ function startMcpServer(): ChildProcess {
   console.log("Starting MCP server...");
 
   const mcpProcess = fork(mcpServerPath, [], {
-    stdio: ["inherit", "inherit", "inherit", "ipc"],
+    // Piped (not inherited) so the MCP server's output also reaches the log buffer
+    stdio: ["inherit", "pipe", "pipe", "ipc"],
     env: {
       ...process.env,
       MCP_API_KEY: process.env.TELEGRAM_MCP_API_KEY,
     }, // Pass the same environment variables
+  });
+
+  const logStdout = createStreamLogger("mcp", "log");
+  const logStderr = createStreamLogger("mcp", "error");
+  mcpProcess.stdout?.on("data", (chunk) => {
+    process.stdout.write(chunk);
+    logStdout(chunk);
+  });
+  mcpProcess.stderr?.on("data", (chunk) => {
+    process.stderr.write(chunk);
+    logStderr(chunk);
   });
 
   mcpProcess.on("error", (err) => {
