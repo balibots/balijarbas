@@ -124,6 +124,7 @@ export class OpenAIProvider implements LLMProvider {
 
   private parseResponse(response: OpenAI.Responses.Response): LLMResponse {
     const toolCalls: ToolCall[] = [];
+    const webSearches: string[] = [];
     let textContent: string | undefined;
 
     for (const item of response.output) {
@@ -140,7 +141,12 @@ export class OpenAIProvider implements LLMProvider {
           id: item.id,
           name: item.name ?? "",
           arguments: "arguments" in item ? (item.arguments as string) : "{}",
+          ...(item.output && { output: item.output }),
         });
+      } else if (item.type === "web_search_call") {
+        if (item.action?.type === "search" && item.action.query) {
+          webSearches.push(item.action.query);
+        }
       } else if (item.type === "message") {
         // Extract text content from message
         for (const content of item.content) {
@@ -154,6 +160,7 @@ export class OpenAIProvider implements LLMProvider {
     return {
       toolCalls,
       textContent,
+      ...(webSearches.length > 0 && { webSearches }),
       rawOutput: response.output,
     };
   }

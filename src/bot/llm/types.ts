@@ -81,6 +81,7 @@ export interface McpCall {
   id: string;
   name: string;
   arguments: string; // JSON string
+  output?: string; // Executed server-side, so the result comes back with the call
 }
 
 export type ToolCall = FunctionCall | McpCall;
@@ -91,6 +92,8 @@ export interface LLMResponse {
   toolCalls: ToolCall[];
   // Text content (if any)
   textContent?: string;
+  // Queries the provider searched the web for (server-side, not tool calls)
+  webSearches?: string[];
   // Raw output items for providers that need them passed back
   rawOutput?: unknown[];
 }

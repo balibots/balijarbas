@@ -37,7 +37,14 @@ export const FLY_API_TOKEN = process.env.FLY_API_TOKEN;
 export const FLY_APP_NAME = process.env.FLY_APP_NAME ?? "balijarbas";
 
 // Session Configuration
-export const MAX_CONTEXT_MESSAGES = 5;
+// How many messages (including tool action records) are kept in the session
+export const MAX_STORED_MESSAGES = 60;
+// Conversation history sent to the model: newest messages first, until either limit is hit
+export const HISTORY_MAX_MESSAGES = 40;
+export const HISTORY_CHAR_BUDGET = 24_000; // ~6k tokens
+// Long messages are trimmed (head + tail) when rendered into history
+export const HISTORY_MESSAGE_MAX_CHARS = 1_500;
+export const TOOL_ACTION_MAX_CHARS = 300;
 
 // Redis Configuration
 export const REDIS_URL = process.env.REDIS_URL;

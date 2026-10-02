@@ -1,11 +1,23 @@
 import { ChatMessage, ChatConfig, MyContext, SessionData } from "./types.js";
-import { MAX_CONTEXT_MESSAGES } from "./config.js";
+import {
+  MAX_STORED_MESSAGES,
+  HISTORY_MAX_MESSAGES,
+  HISTORY_CHAR_BUDGET,
+  HISTORY_MESSAGE_MAX_CHARS,
+  TOOL_ACTION_MAX_CHARS,
+} from "./config.js";
 
 export const DEFAULT_CONFIG: ChatConfig = {
   customPrompt: null,
   language: null,
   personality: null,
 };
+
+// Prefix for tool action records in the history (the system prompt explains it)
+export const ACTION_PREFIX = "⚙";
+
+// Tools whose effect is already recorded as a chat message
+const UNRECORDED_TOOLS = new Set(["send_message", "send_voice_reply"]);
 
 export function createInitialSession(): SessionData {
   return {
@@ -15,6 +27,15 @@ export function createInitialSession(): SessionData {
   };
 }
 
+function pushMessage(ctx: MyContext, message: ChatMessage): void {
+  ctx.session.messages.push(message);
+
+  // Keep only the last N messages
+  if (ctx.session.messages.length > MAX_STORED_MESSAGES) {
+    ctx.session.messages = ctx.session.messages.slice(-MAX_STORED_MESSAGES);
+  }
+}
+
 export function addMessageToSession(
   ctx: MyContext,
   role: "user" | "assistant",
@@ -22,33 +43,102 @@ export function addMessageToSession(
   content: string,
   hasImage?: boolean,
 ): void {
-  ctx.session.messages.push({
+  pushMessage(ctx, {
     role,
     name,
     content,
     ...(hasImage && { hasImage }),
     timestamp: Date.now(),
   });
-
-  // Keep only the last N messages
-  if (ctx.session.messages.length > MAX_CONTEXT_MESSAGES) {
-    ctx.session.messages = ctx.session.messages.slice(-MAX_CONTEXT_MESSAGES);
-  }
 }
 
-export function formatConversationHistory(messages: ChatMessage[]): string {
-  if (messages.length === 0) {
-    return "No previous messages in this conversation.";
+/**
+ * Record a compact trace of a tool call so follow-ups ("move that reminder")
+ * can refer to what the bot actually did.
+ */
+export function addToolActionToSession(
+  ctx: MyContext,
+  toolName: string,
+  args: Record<string, unknown>,
+  result?: string,
+): void {
+  if (UNRECORDED_TOOLS.has(toolName)) return;
+
+  const { chat_id: _chatId, ...rest } = args;
+  const argsText = truncate(JSON.stringify(rest), TOOL_ACTION_MAX_CHARS);
+  const resultText = result ? ` → ${truncate(result, TOOL_ACTION_MAX_CHARS)}` : "";
+
+  pushMessage(ctx, {
+    role: "assistant",
+    name: ctx.me?.first_name ?? "Bot",
+    content: `${ACTION_PREFIX} ${toolName}(${argsText})${resultText}`,
+    isAction: true,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Trim long text, keeping the start and the end
+ */
+export function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const head = Math.floor(maxChars * 0.67);
+  const tail = maxChars - head;
+  return `${text.slice(0, head)} […truncated…] ${text.slice(-tail)}`;
+}
+
+function formatHistoryLine(msg: ChatMessage): string {
+  const content = truncate(msg.content, HISTORY_MESSAGE_MAX_CHARS);
+  if (msg.role === "assistant") return content;
+
+  const time = new Date(msg.timestamp).toISOString().slice(0, 16).replace("T", " ");
+  const imageNote = msg.hasImage ? " [sent an image]" : "";
+  return `[${time}] ${msg.name}: ${content}${imageNote}`;
+}
+
+export interface HistoryTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * Turn the stored messages into user/assistant turns for the model.
+ * The last stored message is the one being handled and is sent separately.
+ * Takes the newest messages that fit the message/char budget; consecutive
+ * messages from the same side (e.g. several group members) share a turn.
+ */
+export function buildHistoryTurns(messages: ChatMessage[]): HistoryTurn[] {
+  const past = messages.slice(0, -1);
+
+  const window: string[] = [];
+  const roles: Array<"user" | "assistant"> = [];
+  let chars = 0;
+  for (
+    let i = past.length - 1;
+    i >= 0 && window.length < HISTORY_MAX_MESSAGES;
+    i--
+  ) {
+    const line = formatHistoryLine(past[i]);
+    if (chars + line.length > HISTORY_CHAR_BUDGET) break;
+    chars += line.length;
+    window.unshift(line);
+    roles.unshift(past[i].role);
   }
 
-  return messages
-    .slice(0, -1)
-    .map((msg) => {
-      const imageNote = msg.hasImage ? " [sent an image]" : "";
-      const time = new Date(msg.timestamp).toISOString();
-      return `[${time}] [${msg.role}] ${msg.name}: ${msg.content}${imageNote}`;
-    })
-    .join("\n");
+  const turns: HistoryTurn[] = [];
+  window.forEach((line, i) => {
+    const last = turns[turns.length - 1];
+    if (last && last.role === roles[i]) {
+      last.content += `\n${line}`;
+    } else {
+      turns.push({ role: roles[i], content: line });
+    }
+  });
+
+  // Start on a user turn (some providers reject a leading model turn)
+  while (turns[0]?.role === "assistant") turns.shift();
+
+  return turns;
 }
 
 export function resetSession(ctx: MyContext): void {

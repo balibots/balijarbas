@@ -279,12 +279,16 @@ function buildSystemPrompt(ctx: MyContext): string {
 }
 ```
 
+### Conversation History
+
+`buildHistoryTurns()` in `src/bot/session.ts` sends history as real `user`/`assistant` turns between the system prompt and the current message. It takes the newest entries up to `HISTORY_MAX_MESSAGES` / `HISTORY_CHAR_BUDGET`, trims long messages (head + tail) to `HISTORY_MESSAGE_MAX_CHARS`, and merges consecutive same-side entries into one turn. The system prompt only carries the date (not the time) so the prefix stays cacheable.
+
 ### User Input Components
 
 Each user message is enriched with metadata:
 
 ```typescript
-function buildUserInput(ctx, conversationHistory): string {
+function buildUserInput(ctx): string {
   return [
     `chat_id=${chat.id} chat_type=${chat.type}`,
     `from=${user.name} (@${user.username})`,
@@ -292,10 +296,6 @@ function buildUserInput(ctx, conversationHistory): string {
     `text=${msg.text}`,
     `was_mentioned=${wasMentioned(ctx)}`,
     `is_reply_to_bot=${isReplyToBot(ctx)}`,
-    "",
-    "--- Recent conversation history ---",
-    conversationHistory,
-    "--- End of history ---",
   ].join("\n");
 }
 ```
@@ -304,7 +304,7 @@ function buildUserInput(ctx, conversationHistory): string {
 
 ### Session State (Persistent)
 Managed via Grammy's free storage, persists across restarts:
-- `messages[]` - Conversation history (last 10 messages)
+- `messages[]` - Conversation history (last 60 entries): chat messages plus `isAction` records of tool calls the bot made (`⚙ tool(args) → result`), so follow-ups can refer to what it did
 - `config{}` - Chat configuration
 - `notes{}` - Keyed notes store
 

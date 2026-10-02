@@ -692,6 +692,14 @@ export async function handleToolCall(
             }),
           },
         );
+        if (chat_id === chatId) {
+          addMessageToSession(
+            ctx,
+            "assistant",
+            ctx.me?.first_name ?? "Bot",
+            `[Voice message]: ${text}`,
+          );
+        }
         return JSON.stringify({
           success: true,
           message: "Voice message sent.",

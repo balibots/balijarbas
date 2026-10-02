@@ -7,6 +7,7 @@ export interface ChatMessage {
   name: string;
   content: string;
   hasImage?: boolean; // Whether this message included an image
+  isAction?: boolean; // A record of a tool call the bot made, not a chat message
   timestamp: number;
 }
 
