@@ -283,6 +283,18 @@ function buildSystemPrompt(ctx: MyContext): string {
 
 `buildHistoryTurns()` in `src/bot/session.ts` sends history as real `user`/`assistant` turns between the system prompt and the current message. It takes the newest entries up to `HISTORY_MAX_MESSAGES` / `HISTORY_CHAR_BUDGET`, trims long messages (head + tail) to `HISTORY_MESSAGE_MAX_CHARS`, and merges consecutive same-side entries into one turn. The system prompt only carries the date (not the time) so the prefix stays cacheable.
 
+### Rolling Summary
+
+`src/bot/summary.ts`. `maybeCompactHistory()` runs after the reply has been sent (not awaited) and folds messages into a summary with one extra LLM call when either:
+- a new conversation has started after a pause longer than `CONVERSATION_GAP_MS` (6h), in which case the whole previous conversation is folded; or
+- the messages not yet summarized outgrow the history budget, in which case everything except the newest `HISTORY_KEEP_RECENT` is folded.
+
+The call uses `SUMMARY_MODEL`, which defaults to the main model. The new summary is rewritten from the old one plus the folded messages, capped at `SUMMARY_MAX_CHARS`.
+
+The summary is stored under its own Redis key, `summary:<chatId>` → `{ text, coveredUpTo }`, not in the Grammy session. Background writes therefore can't race the session middleware, which writes the whole session back at the end of each update. The summary goes into the system prompt, and history only includes messages newer than `coveredUpTo`. It is cleared when the bot joins or leaves a chat. The summary has two sections. ABOUT THE CHAT holds lasting facts (people, preferences, running jokes). RECENT EVENTS holds dated bullets, which the summarizer marks as past once their date has gone by and compresses after about two weeks.
+
+Time cues for the main agent: pauses longer than `GAP_MARKER_MS` (3h) get a `— 2 days later —` marker in the history. The current message notes a long silence before it, and the summary header in the prompt says how far the summary reaches.
+
 ### User Input Components
 
 Each user message is enriched with metadata:
@@ -307,6 +319,8 @@ Managed via Grammy's free storage, persists across restarts:
 - `messages[]` - Conversation history (last 60 entries): chat messages plus `isAction` records of tool calls the bot made (`⚙ tool(args) → result`), so follow-ups can refer to what it did
 - `config{}` - Chat configuration
 - `notes{}` - Keyed notes store
+
+Separately in Redis: `summary:<chatId>` - rolling summary of older conversation (see Rolling Summary)
 
 ### Runtime State (In-Memory)
 Lost on restart:

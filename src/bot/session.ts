@@ -5,6 +5,7 @@ import {
   HISTORY_CHAR_BUDGET,
   HISTORY_MESSAGE_MAX_CHARS,
   TOOL_ACTION_MAX_CHARS,
+  GAP_MARKER_MS,
 } from "./config.js";
 
 export const DEFAULT_CONFIG: ChatConfig = {
@@ -87,13 +88,26 @@ export function truncate(text: string, maxChars: number): string {
   return `${text.slice(0, head)} […truncated…] ${text.slice(-tail)}`;
 }
 
-function formatHistoryLine(msg: ChatMessage): string {
+export function formatTime(timestamp: number): string {
+  return new Date(timestamp).toISOString().slice(0, 16).replace("T", " ");
+}
+
+/**
+ * Human-readable length of a pause, e.g. "5 hours", "2 days"
+ */
+export function formatGap(ms: number): string {
+  const hours = Math.round(ms / 3_600_000);
+  if (hours < 24) return hours === 1 ? "1 hour" : `${hours} hours`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
+export function formatHistoryLine(msg: ChatMessage): string {
   const content = truncate(msg.content, HISTORY_MESSAGE_MAX_CHARS);
   if (msg.role === "assistant") return content;
 
-  const time = new Date(msg.timestamp).toISOString().slice(0, 16).replace("T", " ");
   const imageNote = msg.hasImage ? " [sent an image]" : "";
-  return `[${time}] ${msg.name}: ${content}${imageNote}`;
+  return `[${formatTime(msg.timestamp)}] ${msg.name}: ${content}${imageNote}`;
 }
 
 export interface HistoryTurn {
@@ -104,11 +118,17 @@ export interface HistoryTurn {
 /**
  * Turn the stored messages into user/assistant turns for the model.
  * The last stored message is the one being handled and is sent separately.
+ * Messages up to `coveredUpTo` are already in the summary and are skipped.
  * Takes the newest messages that fit the message/char budget; consecutive
  * messages from the same side (e.g. several group members) share a turn.
  */
-export function buildHistoryTurns(messages: ChatMessage[]): HistoryTurn[] {
-  const past = messages.slice(0, -1);
+export function buildHistoryTurns(
+  messages: ChatMessage[],
+  coveredUpTo = 0,
+): HistoryTurn[] {
+  const past = messages
+    .slice(0, -1)
+    .filter((msg) => msg.timestamp > coveredUpTo);
 
   const window: string[] = [];
   const roles: Array<"user" | "assistant"> = [];
@@ -118,7 +138,10 @@ export function buildHistoryTurns(messages: ChatMessage[]): HistoryTurn[] {
     i >= 0 && window.length < HISTORY_MAX_MESSAGES;
     i--
   ) {
-    const line = formatHistoryLine(past[i]);
+    // Mark long pauses so old conversation isn't mistaken for the current one
+    const gap = i > 0 ? past[i].timestamp - past[i - 1].timestamp : 0;
+    const marker = gap > GAP_MARKER_MS ? `— ${formatGap(gap)} later —\n` : "";
+    const line = marker + formatHistoryLine(past[i]);
     if (chars + line.length > HISTORY_CHAR_BUDGET) break;
     chars += line.length;
     window.unshift(line);
