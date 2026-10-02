@@ -16,7 +16,7 @@ A smart Telegram bot powered by OpenAI that can manage tasks, remember context, 
 
 ### 📝 Keyed Notes / Memory
 - Store notes, to-do lists, and context organized by categories
-- Examples: "shopping list", "birthdays", "reminders", "todos"
+- Examples: "shopping list", "birthdays", "todos"
 - Persistent storage that survives bot restarts
 
 ### ⚙️ Per-Chat Configuration
@@ -69,7 +69,7 @@ LLM_PROVIDER=openai
 
 # OpenAI Configuration (required if LLM_PROVIDER=openai)
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4.1-mini             # Optional, defaults to gpt-4.1-mini
+OPENAI_MODEL=gpt-6-luna             # Optional, defaults to gpt-6-luna
 
 # Google Gemini Configuration (required if LLM_PROVIDER=gemini)
 GEMINI_API_KEY=your_gemini_api_key
@@ -87,7 +87,7 @@ The bot supports multiple LLM providers via the `@google/genai` and `openai` SDK
 
 | Provider | Models | Function Tools | Google Search | MCP Tools |
 |----------|--------|----------------|---------------|-----------|
-| OpenAI | gpt-4.1-mini, gpt-4o, etc. | ✅ | ✅ (web_search) | ✅ |
+| OpenAI | gpt-6-luna, gpt-4o, etc. | ✅ | ✅ (web_search) | ✅ |
 | Gemini | gemini-3-flash, gemini-2.5-pro | ✅ | ✅ (grounding) | ⚠️ Limited |
 
 **Notes:**

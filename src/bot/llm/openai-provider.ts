@@ -20,7 +20,7 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(config: OpenAIProviderConfig) {
     this.client = new OpenAI({ apiKey: config.apiKey });
-    this.defaultModel = config.defaultModel ?? "gpt-5-mini";
+    this.defaultModel = config.defaultModel ?? "gpt-6-luna";
   }
 
   async complete(
@@ -97,7 +97,7 @@ export class OpenAIProvider implements LLMProvider {
           server_description: tool.server_description,
           server_url: tool.server_url,
           require_approval: tool.require_approval,
-          // defer_loading: true, -- tool_search is not yet supported with gpt-5-mini
+          ...(tool.defer_loading && { defer_loading: true }),
           ...(tool.headers && { headers: tool.headers }),
         };
       } else if (tool.type === "web_search") {

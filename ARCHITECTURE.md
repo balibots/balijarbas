@@ -69,7 +69,7 @@ Factory pattern via `createProviderFromEnv()`, selected by `LLM_PROVIDER` env va
 
 | Provider | Default Model | MCP Support | Web Search | SDK |
 |----------|---------------|-------------|------------|-----|
-| OpenAI | gpt-4.1-mini | Yes | Yes (native) | `openai` |
+| OpenAI | gpt-6-luna | Yes | Yes (native) | `openai` |
 | Gemini | gemini-3-flash | Limited | Yes (Google Search grounding) | `@google/genai` |
 
 Both implement `LLMProvider` interface returning `LLMResponse` with `toolCalls[]`, `textContent`, `rawOutput`.
@@ -129,7 +129,7 @@ LLM_PROVIDER=openai|gemini
 
 # Provider-specific (one required)
 OPENAI_API_KEY=xxx
-OPENAI_MODEL=gpt-4.1-mini          # optional
+OPENAI_MODEL=gpt-6-luna          # optional
 GEMINI_API_KEY=xxx
 GEMINI_MODEL=gemini-3-flash         # optional
 

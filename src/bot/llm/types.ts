@@ -18,6 +18,8 @@ export interface McpTool {
   server_url: string;
   require_approval: "always" | "never";
   headers?: Record<string, string>;
+  // Only load the server's tool definitions when the model searches for them (needs tool_search)
+  defer_loading?: boolean;
 }
 
 export interface WebSearchTool {
