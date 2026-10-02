@@ -22,12 +22,12 @@ import { ChatConfig, MyContext, NoteItem } from "./types.js";
 // Tool definitions exposed to the LLM
 export const tools: ResponseCreateParamsNonStreaming["tools"] = [
   { type: "web_search" },
-  // { type: "tool_search" }, -- not yet supported with gpt-5-mini
+  // { type: "tool_search" }, -- not yet enabled
   {
     type: "function",
     name: "schedule_task",
     description:
-      "Schedule a task to run at a specific time or on a recurring schedule. The prompt will be executed by the AI at the scheduled time and the response sent to the chat.",
+      "Schedule a task to run at a specific time or on a recurring schedule. ALWAYS use this for reminders ('remind me to...', 'ping me in 2 hours', 'every Monday remind us...'). The prompt will be executed by the AI at the scheduled time and the response sent to the chat.",
     strict: false,
     parameters: {
       type: "object",
@@ -135,7 +135,7 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
     type: "function",
     name: "add_note",
     description:
-      "Add an item to a keyed notes list. Use this to store to-do items, shopping lists, reminders, or any categorized information. Examples: 'add eggs to shopping list', 'remember that John's birthday is March 5th under birthdays'.",
+      "Add an item to a keyed notes list. Use this to store to-do items, shopping lists, or any categorized information. Do NOT use this for reminders that should notify someone at a given time — use schedule_task for those. Examples: 'add eggs to shopping list', 'remember that John's birthday is March 5th under birthdays'.",
     strict: false,
     parameters: {
       type: "object",
@@ -143,7 +143,7 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
         key: {
           type: "string",
           description:
-            "The key/category for the note (e.g., 'shopping list', 'todos', 'birthdays', 'reminders', 'general'). Use lowercase and keep it simple.",
+            "The key/category for the note (e.g., 'shopping list', 'todos', 'birthdays', 'general'). Use lowercase and keep it simple.",
         },
         content: {
           type: "string",
