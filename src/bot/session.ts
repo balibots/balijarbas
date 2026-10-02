@@ -87,13 +87,16 @@ export function truncate(text: string, maxChars: number): string {
   return `${text.slice(0, head)} […truncated…] ${text.slice(-tail)}`;
 }
 
-function formatHistoryLine(msg: ChatMessage): string {
+export function formatTime(timestamp: number): string {
+  return new Date(timestamp).toISOString().slice(0, 16).replace("T", " ");
+}
+
+export function formatHistoryLine(msg: ChatMessage): string {
   const content = truncate(msg.content, HISTORY_MESSAGE_MAX_CHARS);
   if (msg.role === "assistant") return content;
 
-  const time = new Date(msg.timestamp).toISOString().slice(0, 16).replace("T", " ");
   const imageNote = msg.hasImage ? " [sent an image]" : "";
-  return `[${time}] ${msg.name}: ${content}${imageNote}`;
+  return `[${formatTime(msg.timestamp)}] ${msg.name}: ${content}${imageNote}`;
 }
 
 export interface HistoryTurn {
@@ -104,11 +107,17 @@ export interface HistoryTurn {
 /**
  * Turn the stored messages into user/assistant turns for the model.
  * The last stored message is the one being handled and is sent separately.
+ * Messages up to `coveredUpTo` are already in the summary and are skipped.
  * Takes the newest messages that fit the message/char budget; consecutive
  * messages from the same side (e.g. several group members) share a turn.
  */
-export function buildHistoryTurns(messages: ChatMessage[]): HistoryTurn[] {
-  const past = messages.slice(0, -1);
+export function buildHistoryTurns(
+  messages: ChatMessage[],
+  coveredUpTo = 0,
+): HistoryTurn[] {
+  const past = messages
+    .slice(0, -1)
+    .filter((msg) => msg.timestamp > coveredUpTo);
 
   const window: string[] = [];
   const roles: Array<"user" | "assistant"> = [];

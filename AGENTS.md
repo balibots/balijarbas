@@ -283,6 +283,12 @@ function buildSystemPrompt(ctx: MyContext): string {
 
 `buildHistoryTurns()` in `src/bot/session.ts` sends history as real `user`/`assistant` turns between the system prompt and the current message. It takes the newest entries up to `HISTORY_MAX_MESSAGES` / `HISTORY_CHAR_BUDGET`, trims long messages (head + tail) to `HISTORY_MESSAGE_MAX_CHARS`, and merges consecutive same-side entries into one turn. The system prompt only carries the date (not the time) so the prefix stays cacheable.
 
+### Rolling Summary
+
+`src/bot/summary.ts`. When the messages not yet summarized outgrow the history budget, `maybeCompactHistory()` runs after the reply has been sent (not awaited). It folds everything except the newest `HISTORY_KEEP_RECENT` messages into a summary with one extra LLM call (`SUMMARY_MODEL`, defaults to the main model). The new summary is rewritten from the old one plus the folded messages, capped at `SUMMARY_MAX_CHARS`.
+
+The summary is stored under its own Redis key, `summary:<chatId>` → `{ text, coveredUpTo }`, not in the Grammy session. Background writes therefore can't race the session middleware, which writes the whole session back at the end of each update. The summary goes into the system prompt, and history only includes messages newer than `coveredUpTo`. It is cleared when the bot joins or leaves a chat.
+
 ### User Input Components
 
 Each user message is enriched with metadata:
@@ -307,6 +313,8 @@ Managed via Grammy's free storage, persists across restarts:
 - `messages[]` - Conversation history (last 60 entries): chat messages plus `isAction` records of tool calls the bot made (`⚙ tool(args) → result`), so follow-ups can refer to what it did
 - `config{}` - Chat configuration
 - `notes{}` - Keyed notes store
+
+Separately in Redis: `summary:<chatId>` - rolling summary of older conversation (see Rolling Summary)
 
 ### Runtime State (In-Memory)
 Lost on restart:

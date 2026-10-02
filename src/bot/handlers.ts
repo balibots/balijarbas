@@ -1,6 +1,5 @@
 import { Bot, session } from "grammy";
 import { RedisAdapter } from "@grammyjs/storage-redis";
-import { Redis } from "ioredis";
 import { MyContext, SessionData } from "./types.js";
 import {
   createInitialSession,
@@ -16,14 +15,15 @@ import {
   downloadTelegramImage,
   downloadTelegramFile,
 } from "./helpers.js";
-import { ELEVENLABS_API_KEY, REDIS_URL } from "./config.js";
+import { ELEVENLABS_API_KEY } from "./config.js";
+import { redis } from "./redis.js";
+import { clearSummary } from "./summary.js";
 import { speechToText } from "./elevenlabs.js";
 import { decideAndAct, processInlineQuery } from "./llm.js";
 import { InlineQueryResultArticle } from "grammy/types";
 
 export function setupHandlers(bot: Bot<MyContext>): void {
   // Initialize session middleware with Redis persistent storage
-  const redis = new Redis(REDIS_URL!);
   bot.use(
     session({
       initial: createInitialSession,
@@ -42,6 +42,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       (oldStatus === "left" || oldStatus === "kicked")
     ) {
       resetSession(ctx);
+      await clearSummary(ctx.chat.id);
       console.log(`Bot joined chat ${ctx.chat.id}, session reset.`);
     }
 
@@ -51,6 +52,7 @@ export function setupHandlers(bot: Bot<MyContext>): void {
       (oldStatus === "member" || oldStatus === "administrator")
     ) {
       resetSession(ctx);
+      await clearSummary(ctx.chat.id);
       cancelAllTasksForChat(ctx.chat.id);
       console.log(`Bot left chat ${ctx.chat.id}, session and tasks reset.`);
     }

@@ -45,6 +45,12 @@ export const HISTORY_CHAR_BUDGET = 24_000; // ~6k tokens
 // Long messages are trimmed (head + tail) when rendered into history
 export const HISTORY_MESSAGE_MAX_CHARS = 1_500;
 export const TOOL_ACTION_MAX_CHARS = 300;
+// Once unsummarized history outgrows the limits above, the oldest messages are
+// folded into a rolling summary, keeping this many recent ones verbatim
+export const HISTORY_KEEP_RECENT = 20;
+export const SUMMARY_MAX_CHARS = 3_000;
+// Model for summarization (defaults to the provider's main model)
+export const SUMMARY_MODEL = process.env.SUMMARY_MODEL;
 
 // Redis Configuration
 export const REDIS_URL = process.env.REDIS_URL;
