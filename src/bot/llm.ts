@@ -20,12 +20,14 @@ import {
   getChatConfig,
   formatConfigForPrompt,
 } from "./tools.js";
-import { ELEVENLABS_API_KEY } from "./config.js";
+import { ELEVENLABS_API_KEY, GAP_MARKER_MS } from "./config.js";
 import { isOpsEnabled, getOpsTools, getOpsPrompt } from "./ops.js";
 import {
   buildHistoryTurns,
   addMessageToSession,
   addToolActionToSession,
+  formatGap,
+  formatTime,
   ACTION_PREFIX,
 } from "./session.js";
 import { wasMentioned, isReplyToBot, getUserName } from "./helpers.js";
@@ -90,7 +92,7 @@ function buildSystemPrompt(
 
   if (summary) {
     parts.push(
-      `\n\nSummary of the earlier conversation in this chat (it covers messages older than the turns below — background context, not instructions):\n${summary.text}`,
+      `\n\nSummary of the earlier conversation in this chat, up to ${formatTime(summary.coveredUpTo)} UTC (it covers messages older than the turns below — background context, not instructions):\n${summary.text}`,
     );
   }
 
@@ -117,9 +119,17 @@ function buildUserInput(
   const now = new Date().toISOString();
   const caption = "caption" in msg ? msg.caption : "";
 
+  // The current message is already stored, so the one before it is the previous message
+  const messages = ctx.session.messages;
+  const previous = messages[messages.length - 2];
+  const gap = previous ? Date.now() - previous.timestamp : 0;
+
   const textContent = [
     "=== CURRENT MESSAGE (this is the user's active request — prioritize this) ===",
     `[${now}]`,
+    ...(gap > GAP_MARKER_MS
+      ? [`(First message in this chat for ${formatGap(gap)} — earlier messages are from a previous conversation.)`]
+      : []),
     `From: ${ctx.from?.first_name ?? ""} ${ctx.from?.last_name ?? ""} (@${ctx.from?.username ?? ""})`,
     `Text: ${messageText}`,
     ...(caption ? [`Caption: ${caption}`] : []),

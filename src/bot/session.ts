@@ -5,6 +5,7 @@ import {
   HISTORY_CHAR_BUDGET,
   HISTORY_MESSAGE_MAX_CHARS,
   TOOL_ACTION_MAX_CHARS,
+  GAP_MARKER_MS,
 } from "./config.js";
 
 export const DEFAULT_CONFIG: ChatConfig = {
@@ -91,6 +92,16 @@ export function formatTime(timestamp: number): string {
   return new Date(timestamp).toISOString().slice(0, 16).replace("T", " ");
 }
 
+/**
+ * Human-readable length of a pause, e.g. "5 hours", "2 days"
+ */
+export function formatGap(ms: number): string {
+  const hours = Math.round(ms / 3_600_000);
+  if (hours < 24) return hours === 1 ? "1 hour" : `${hours} hours`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
 export function formatHistoryLine(msg: ChatMessage): string {
   const content = truncate(msg.content, HISTORY_MESSAGE_MAX_CHARS);
   if (msg.role === "assistant") return content;
@@ -127,7 +138,10 @@ export function buildHistoryTurns(
     i >= 0 && window.length < HISTORY_MAX_MESSAGES;
     i--
   ) {
-    const line = formatHistoryLine(past[i]);
+    // Mark long pauses so old conversation isn't mistaken for the current one
+    const gap = i > 0 ? past[i].timestamp - past[i - 1].timestamp : 0;
+    const marker = gap > GAP_MARKER_MS ? `— ${formatGap(gap)} later —\n` : "";
+    const line = marker + formatHistoryLine(past[i]);
     if (chars + line.length > HISTORY_CHAR_BUDGET) break;
     chars += line.length;
     window.unshift(line);

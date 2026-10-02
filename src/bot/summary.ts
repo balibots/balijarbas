@@ -1,11 +1,13 @@
 /**
  * Rolling conversation summary
  *
- * Once a chat's unsummarized history outgrows the history budget, the oldest
- * messages are folded into a summary by an extra LLM call, keeping the most
- * recent ones verbatim. The summary lives under its own Redis key (not in the
- * Grammy session) so it can be written in the background without racing the
- * session middleware, and `coveredUpTo` marks which messages it includes.
+ * The oldest messages are folded into a summary by an extra LLM call when a
+ * chat's unsummarized history outgrows the history budget (keeping the most
+ * recent ones verbatim), or when a new conversation starts after a long pause
+ * (folding the whole previous one). The summary lives under its own Redis key
+ * (not in the Grammy session) so it can be written in the background without
+ * racing the session middleware, and `coveredUpTo` marks which messages it
+ * includes.
  */
 
 import { ChatMessage } from "./types.js";
@@ -18,6 +20,7 @@ import {
   HISTORY_KEEP_RECENT,
   SUMMARY_MAX_CHARS,
   SUMMARY_MODEL,
+  CONVERSATION_GAP_MS,
 } from "./config.js";
 
 export interface ChatSummary {
@@ -28,17 +31,28 @@ export interface ChatSummary {
 
 const SUMMARY_PROMPT = [
   "You maintain the running memory of a Telegram chat between users and a bot assistant.",
-  "You get the current summary (possibly empty) and a transcript of the next, older messages that are about to leave the bot's view. Rewrite the summary so it also covers them.",
-  "Keep what the bot needs to carry on the conversation naturally:",
-  "- who the participants are, how they relate, and their stated preferences or facts about them;",
+  "You get the current date, the current summary (possibly empty) and a transcript of the next, older messages that are about to leave the bot's view. Rewrite the summary so it also covers them.",
+  "",
+  "Use exactly these two sections:",
+  "",
+  "ABOUT THE CHAT — lasting facts that don't expire:",
+  "- who the participants are, how they relate, facts and stated preferences about them;",
+  "- running jokes, recurring topics and the general tone of the chat.",
+  "",
+  "RECENT EVENTS — dated bullets, newest first, each starting with its date (e.g. '2026-10-03:'):",
   "- topics discussed and what was concluded or decided;",
   "- open questions, unfinished requests and anything someone is waiting on;",
   "- what the bot did or promised (lines starting with ⚙ are its tool calls — keep task IDs, scheduled times, note keys);",
-  "- concrete details worth remembering: names, dates, numbers, places, links;",
-  "- running jokes and the general tone of the chat.",
-  "Drop small talk, greetings and anything fully resolved or superseded by later messages. Turn relative times ('tomorrow', 'in 2 hours') into absolute dates using the message timestamps.",
-  "Write in English, keeping names and quoted terms in their original language. Use short bullet points grouped under a few headings, most relevant first.",
-  `Stay under ${Math.floor(SUMMARY_MAX_CHARS / 6)} words. Merge and compress rather than append; if space runs out, drop the oldest and least relevant details first.`,
+  "- concrete details worth remembering: names, dates, numbers, places, links.",
+  "",
+  "Rules:",
+  "- Always use absolute dates. Turn relative times ('tomorrow', 'in 2 hours') into dates using the message timestamps.",
+  "- Compare plans and deadlines with the current date: if their date has passed, rewrite them as past ('trip to Lisbon was planned for Nov 6–9 — probably happened') instead of keeping them as upcoming.",
+  "- Events older than about two weeks: squeeze into a single line or drop them, unless they are still open or someone is waiting on them. Move anything lasting they revealed (a preference, a fact about someone) to ABOUT THE CHAT.",
+  "- Drop small talk, greetings and anything fully resolved or superseded by later messages.",
+  "- Write in English, keeping names and quoted terms in their original language.",
+  `- Stay under ${Math.floor(SUMMARY_MAX_CHARS / 6)} words. Merge and compress rather than append; if space runs out, drop the oldest and least relevant events first.`,
+  "",
   "Output only the summary.",
 ].join("\n");
 
@@ -64,9 +78,23 @@ export async function clearSummary(chatId: number): Promise<void> {
 }
 
 /**
- * Pick the messages to fold into the summary, or none if history still fits.
- * Keeps the newest HISTORY_KEEP_RECENT messages (within half the char budget)
- * and folds everything older that isn't summarized yet.
+ * Index where the newest conversation starts: right after the last pause
+ * longer than CONVERSATION_GAP_MS (0 if there is none).
+ */
+function lastConversationStart(pending: ChatMessage[]): number {
+  for (let i = pending.length - 1; i > 0; i--) {
+    if (pending[i].timestamp - pending[i - 1].timestamp > CONVERSATION_GAP_MS) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Pick the messages to fold into the summary, or none if nothing is due.
+ * - After a long pause, the whole previous conversation is folded.
+ * - If what's left still outgrows the history budget, only the newest
+ *   HISTORY_KEEP_RECENT messages (within half the char budget) are kept.
  */
 function selectMessagesToFold(
   messages: ChatMessage[],
@@ -74,27 +102,29 @@ function selectMessagesToFold(
 ): ChatMessage[] {
   const pending = messages.filter((msg) => msg.timestamp > coveredUpTo);
   const lengths = pending.map((msg) => formatHistoryLine(msg).length);
-  const totalChars = lengths.reduce((sum, len) => sum + len, 0);
+
+  let foldEnd = lastConversationStart(pending);
+  const remainingChars = lengths
+    .slice(foldEnd)
+    .reduce((sum, len) => sum + len, 0);
 
   if (
-    pending.length <= HISTORY_MAX_MESSAGES &&
-    totalChars <= HISTORY_CHAR_BUDGET
+    pending.length - foldEnd > HISTORY_MAX_MESSAGES ||
+    remainingChars > HISTORY_CHAR_BUDGET
   ) {
-    return [];
-  }
-
-  let kept = 0;
-  let keptChars = 0;
-  for (let i = pending.length - 1; i >= 0; i--) {
-    if (kept >= HISTORY_KEEP_RECENT) break;
-    if (keptChars + lengths[i] > HISTORY_CHAR_BUDGET / 2) break;
-    kept++;
-    keptChars += lengths[i];
+    let kept = 0;
+    let keptChars = 0;
+    for (let i = pending.length - 1; i >= 0; i--) {
+      if (kept >= HISTORY_KEEP_RECENT) break;
+      if (keptChars + lengths[i] > HISTORY_CHAR_BUDGET / 2) break;
+      kept++;
+      keptChars += lengths[i];
+    }
+    foldEnd = Math.max(foldEnd, pending.length - kept);
   }
 
   // History turns start on a user message, so leading bot messages in the kept
   // part would be dropped from view — fold them in instead
-  let foldEnd = pending.length - kept;
   while (foldEnd < pending.length && pending[foldEnd].role === "assistant") {
     foldEnd++;
   }
@@ -117,8 +147,8 @@ function formatTranscriptLine(msg: ChatMessage): string {
 }
 
 /**
- * Fold old messages into the chat's summary if history has outgrown its budget.
- * Meant to be called without awaiting, after the reply has been sent.
+ * Fold old messages into the chat's summary if a fold is due (long pause or
+ * history over budget). Meant to be called without awaiting, after the reply has been sent.
  */
 export async function maybeCompactHistory(
   chatId: number,
@@ -134,6 +164,8 @@ export async function maybeCompactHistory(
     if (fold.length === 0) return;
 
     const input = [
+      `Current date: ${formatTime(Date.now())} UTC`,
+      "",
       "=== CURRENT SUMMARY ===",
       current?.text ?? "(empty)",
       "",

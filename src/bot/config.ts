@@ -49,6 +49,11 @@ export const TOOL_ACTION_MAX_CHARS = 300;
 // folded into a rolling summary, keeping this many recent ones verbatim
 export const HISTORY_KEEP_RECENT = 20;
 export const SUMMARY_MAX_CHARS = 3_000;
+// Pauses longer than this get a "— 2 days later —" marker in the history
+export const GAP_MARKER_MS = 3 * 60 * 60 * 1000;
+// A pause longer than this ends a conversation: once the next one starts,
+// everything before the pause is folded into the summary
+export const CONVERSATION_GAP_MS = 6 * 60 * 60 * 1000;
 // Model for summarization (defaults to the provider's main model)
 export const SUMMARY_MODEL = process.env.SUMMARY_MODEL;
 
