@@ -385,5 +385,6 @@ To create a specialized agent (e.g., for a specific task type):
 ## Error Handling
 
 - Tool errors return JSON with `success: false` and `error` message
+- Remote MCP servers that fail tool listing (OpenAI returns 424 `Error retrieving tool list from MCP server`) are dropped and the request retried without them; `OpenAIProvider` keeps them out for 5 minutes and tells the model they're unavailable
 - Agent can retry or inform user based on error type
 - Unhandled errors in message handler fall back to generic error message (DMs only)

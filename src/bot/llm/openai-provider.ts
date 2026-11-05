@@ -13,10 +13,17 @@ import {
   OpenAIProviderConfig,
 } from "./types.js";
 
+// OpenAI fails the whole request when it can't list a remote MCP server's tools
+const MCP_LIST_ERROR = /Error retrieving tool list from MCP server: '([^']+)'/;
+// How long to leave out a server that failed before trying it again
+const MCP_COOLDOWN_MS = 5 * 60 * 1000;
+
 export class OpenAIProvider implements LLMProvider {
   readonly name = "openai";
   private client: OpenAI;
   private defaultModel: string;
+  // server_label -> time it may be retried
+  private unavailableMcp = new Map<string, number>();
 
   constructor(config: OpenAIProviderConfig) {
     this.client = new OpenAI({ apiKey: config.apiKey });
@@ -30,27 +37,76 @@ export class OpenAIProvider implements LLMProvider {
   ): Promise<LLMResponse> {
     const model = options?.model ?? this.defaultModel;
 
-    // Convert our tool format to OpenAI format
-    const openaiTools = this.convertTools(tools);
-
     // Convert our input format to OpenAI format
     const openaiInput = this.convertInput(input);
 
-    const params = {
-      model,
-      input: openaiInput,
-      tools: openaiTools,
-      ...(options?.temperature !== undefined && {
-        temperature: options.temperature,
-      }),
-      ...(options?.maxTokens !== undefined && {
-        max_output_tokens: options.maxTokens,
-      }),
-    };
+    // A broken MCP server must not take the bot down: drop it and retry
+    // without it, once per server
+    while (true) {
+      const dropped = this.droppedMcpLabels(tools);
+      const available = tools.filter(
+        (t) => t.type !== "mcp" || !dropped.includes(t.server_label),
+      );
 
-    const response = await this.client.responses.create(params);
+      const params = {
+        model,
+        input:
+          dropped.length > 0
+            ? [
+                ...openaiInput,
+                {
+                  role: "system" as const,
+                  content: `These tool servers are temporarily unavailable: ${dropped.join(", ")}. Tell the user if they ask for something that needs them.`,
+                },
+              ]
+            : openaiInput,
+        tools: this.convertTools(available),
+        ...(options?.temperature !== undefined && {
+          temperature: options.temperature,
+        }),
+        ...(options?.maxTokens !== undefined && {
+          max_output_tokens: options.maxTokens,
+        }),
+      };
 
-    return this.parseResponse(response);
+      try {
+        const response = await this.client.responses.create(params);
+        return this.parseResponse(response);
+      } catch (error) {
+        const label = this.failedMcpLabel(error, available);
+        if (!label) throw error;
+
+        console.error(
+          `MCP server '${label}' unavailable, retrying without it for ${MCP_COOLDOWN_MS / 60000}m: ${(error as Error).message}`,
+        );
+        this.unavailableMcp.set(label, Date.now() + MCP_COOLDOWN_MS);
+      }
+    }
+  }
+
+  /** Labels of MCP servers in `tools` that are still cooling down */
+  private droppedMcpLabels(tools: Tool[]): string[] {
+    const now = Date.now();
+    return tools.flatMap((t) => {
+      if (t.type !== "mcp") return [];
+      const until = this.unavailableMcp.get(t.server_label);
+      if (until === undefined) return [];
+      if (until <= now) {
+        this.unavailableMcp.delete(t.server_label);
+        return [];
+      }
+      return [t.server_label];
+    });
+  }
+
+  /** The MCP server an API error blames, if it's one we sent */
+  private failedMcpLabel(error: unknown, tools: Tool[]): string | undefined {
+    if (!(error instanceof OpenAI.APIError)) return undefined;
+    const label = error.message.match(MCP_LIST_ERROR)?.[1];
+    if (!label) return undefined;
+    return tools.some((t) => t.type === "mcp" && t.server_label === label)
+      ? label
+      : undefined;
   }
 
   buildNextInput(
