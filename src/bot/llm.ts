@@ -45,6 +45,7 @@ const BASE_SYSTEM_PROMPT = [
   "You can see and understand images that users send. When a user sends an image, analyze it and respond appropriately to any questions or requests about it.",
   "Never spam. Never respond to unrelated conversation. Be funny, be cool. This is Telegram for christ's sake.",
   "To reply or acknowledge, call the send_message tool - your text output will NOT be sent automatically. NEVER include citations or citation markers in your replies.",
+  "If a request will take several tool calls (building a playlist, researching something, several searches, multi-step tasks), your FIRST action must be a send_message that acknowledges it with a short plan of what you're about to do (one or two lines, in the chat's tone), so they know you're on it. Then do the work and send the result. Don't do this for quick requests you can answer in one go.",
   "For anything else on Telegram (reactions, polls, photos, pinning, editing messages, etc.), search the Telegram MCP server tools with tool search. Don't use its sendMessage for plain replies - use send_message. If you do use MCP tools, don't provide a parse_mode or a business_connection_id.",
   "REMINDERS: whenever someone asks to be reminded of something (e.g. 'remind me to...', 'don't let me forget...', 'ping me at/in...', 'tell me tomorrow...'), you MUST use the schedule_task tool so the reminder actually fires at the right time. Do NOT use add_note for reminders — a note never notifies anyone. If no time is given, pick a sensible one or ask. After scheduling, confirm the time back to the user via send_message.",
   "You can schedule tasks using the schedule_task tool. For recurring tasks, use cron expressions. For one-time tasks, use ISO 8601 date strings. Use the prompt field to prompt yourself - don't be too prescriptive, it's fine to have logic there. For reminders, write the prompt so your future self sends the reminder to the user (mentioning who asked).",
@@ -179,56 +180,66 @@ export async function decideAndAct(
     ...(isOpsEnabled(ctx) ? getOpsTools() : []),
   ] as unknown as Tool[];
 
+  // Show "typing…" until we're done (Telegram clears it after ~5s, so keep renewing it)
+  const sendTyping = () =>
+    ctx.api.sendChatAction(chat.id, "typing").catch(() => {});
+  void sendTyping();
+  const typingTimer = setInterval(sendTyping, 4_000);
+
   // Loop to handle tool calls
   const MAX_TOOL_CALLS = 8;
   let numToolsCalled = 0;
 
-  while (true) {
-    const response = await provider.complete(currentInput, tools);
-    recordServerSideActions(ctx, response);
+  try {
+    while (true) {
+      const response = await provider.complete(currentInput, tools);
+      recordServerSideActions(ctx, response);
 
-    // Check for function calls that need handling
-    const functionCalls = response.toolCalls.filter(
-      (tc) => tc.type === "function_call",
-    );
-
-    if (functionCalls.length > 0) {
-      const toolResults: Array<{ callId: string; result: string }> = [];
-
-      // Process each function call
-      for (const call of functionCalls) {
-        numToolsCalled++;
-
-        const args = JSON.parse(call.arguments);
-        const result = await handleToolCall(call.name, args, ctx, userName);
-
-        console.log(`Tool call ${call.name} result: ${result}`);
-        addToolActionToSession(ctx, call.name, args, result);
-
-        toolResults.push({
-          callId: call.id,
-          result,
-        });
-      }
-
-      // Build input for next iteration
-      currentInput = provider.buildNextInput(
-        currentInput,
-        response,
-        toolResults,
+      // Check for function calls that need handling
+      const functionCalls = response.toolCalls.filter(
+        (tc) => tc.type === "function_call",
       );
 
-      // Continue the loop to let the model respond
-      if (numToolsCalled >= MAX_TOOL_CALLS) {
-        console.warn(
-          `Maximum number of tools called (${numToolsCalled}) reached, stopping loop.`,
-        );
-        break;
-      }
-      continue;
-    }
+      if (functionCalls.length > 0) {
+        const toolResults: Array<{ callId: string; result: string }> = [];
 
-    break;
+        // Process each function call
+        for (const call of functionCalls) {
+          numToolsCalled++;
+
+          const args = JSON.parse(call.arguments);
+          const result = await handleToolCall(call.name, args, ctx, userName);
+
+          console.log(`Tool call ${call.name} result: ${result}`);
+          addToolActionToSession(ctx, call.name, args, result);
+
+          toolResults.push({
+            callId: call.id,
+            result,
+          });
+        }
+
+        // Build input for next iteration
+        currentInput = provider.buildNextInput(
+          currentInput,
+          response,
+          toolResults,
+        );
+
+        // Continue the loop to let the model respond
+        if (numToolsCalled >= MAX_TOOL_CALLS) {
+          console.warn(
+            `Maximum number of tools called (${numToolsCalled}) reached, stopping loop.`,
+          );
+          break;
+        }
+        continue;
+      }
+
+      break;
+    }
+  } finally {
+    clearInterval(typingTimer);
   }
 
   // Off the hot path: the reply is already out, the summary is for next time
