@@ -154,6 +154,7 @@ export class OpenAIProvider implements LLMProvider {
           server_url: tool.server_url,
           require_approval: tool.require_approval,
           ...(tool.defer_loading && { defer_loading: true }),
+          ...(tool.allowed_tools && { allowed_tools: tool.allowed_tools }),
           ...(tool.headers && { headers: tool.headers }),
         };
       } else if (tool.type === "web_search") {

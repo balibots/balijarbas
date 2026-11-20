@@ -335,6 +335,27 @@ export const tools: ResponseCreateParamsNonStreaming["tools"] = [
       },
     }),
   },
+  {
+    // No API key: playlists are anonymous, edited later with the edit_token create_playlist returns
+    type: "mcp",
+    server_label: "greatdj",
+    server_description:
+      "great.dj: make and edit YouTube playlists anyone can listen to at their great.dj link. Search YouTube for songs, create playlists, add songs, browse popular playlists.",
+    server_url: "https://api.great.dj/mcp",
+    require_approval: "never",
+    defer_loading: true,
+    // The ones that work without an API key
+    allowed_tools: [
+      "search_songs",
+      "create_playlist",
+      "get_playlist",
+      "get_popular_playlists",
+      "add_songs",
+      "update_playlist",
+      "playlist_history",
+      "restore_playlist_version",
+    ],
+  },
 ];
 
 // Helper to get config from session

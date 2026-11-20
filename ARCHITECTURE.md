@@ -93,6 +93,7 @@ Both implement `LLMProvider` interface returning `LLMResponse` with `toolCalls[]
 | Search | web_search (provider native) |
 | Browser | playwright-browser (Playwright MCP, optional) |
 | Telegram API | telegram-mcp (162 methods via MCP) |
+| Playlists | greatdj (great.dj MCP, deferred, anonymous - no API key, keyless tools only) |
 
 ## Deployment
 

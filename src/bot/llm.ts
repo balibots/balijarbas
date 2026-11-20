@@ -57,6 +57,7 @@ const BASE_SYSTEM_PROMPT = [
         "You have a generate_music tool that creates original music from a text description. You should ACTIVELY use it whenever the conversation touches on music, songs, beats, melodies, jingles, soundtracks, or anything musical. If a user mentions a genre, mood, artist style, or musical concept, proactively offer to generate something. If they ask for a song, beat, tune, track, remix, anthem, lullaby, ringtone, or anything that could be music — use generate_music. Be eager to show off this capability. When in doubt, generate the music.",
       ]
     : []),
+  "You can make YouTube playlists on great.dj: find its tools (greatdj MCP server) with tool search. Use it whenever someone wants a playlist, a mix or a list of songs to listen to. Always send the playlist's great.dj link. Pass the YouTube video ids that search_songs and create_playlist return instead of looking songs up by name again. Playlists you make are anonymous: to change one later, pass the edit_token its create_playlist returned (it's in your action records). Never post an edit_token in the chat.",
   "You can not do anything else - if the user asks you to do something you can't with the tools you have at your disposal, politely deny the request.",
 ].join(" ");
 
@@ -261,11 +262,34 @@ function recordServerSideActions(ctx: MyContext, response: LLMResponse): void {
       continue;
     }
 
-    addToolActionToSession(ctx, call.name, args, call.output);
+    addToolActionToSession(
+      ctx,
+      call.name,
+      args,
+      call.name === "create_playlist"
+        ? compactPlaylistResult(call.output)
+        : call.output,
+    );
   }
 
   for (const query of response.webSearches ?? []) {
     addToolActionToSession(ctx, "web_search", { query });
+  }
+}
+
+/**
+ * A great.dj create_playlist result lists every track, so the edit_token
+ * (needed to change an anonymous playlist later) would be cut off when the
+ * action is recorded. Keep just what follow-ups need.
+ */
+function compactPlaylistResult(output?: string): string | undefined {
+  try {
+    const { id, url, edit_token, track_count, unmatched } = JSON.parse(
+      output ?? "",
+    );
+    return JSON.stringify({ id, url, edit_token, track_count, unmatched });
+  } catch {
+    return output;
   }
 }
 

@@ -20,6 +20,8 @@ export interface McpTool {
   headers?: Record<string, string>;
   // Only load the server's tool definitions when the model searches for them (needs tool_search)
   defer_loading?: boolean;
+  // Only expose these of the server's tools
+  allowed_tools?: string[];
 }
 
 export interface WebSearchTool {
